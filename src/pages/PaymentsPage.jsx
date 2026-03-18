@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
-import { Loader2, CheckCircle, Phone, ArrowUpRight, ArrowDownLeft, Wallet, TrendingUp, Clock, Users } from 'lucide-react'
+import { Loader2, CheckCircle, Phone, Wallet } from 'lucide-react'
 import { format, isThisQuarter } from 'date-fns'
 
 function fmtRs(n) {

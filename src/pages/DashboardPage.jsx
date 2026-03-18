@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { APP_VERSION, BUILD_DATE } from '../version.js'
-import { CalendarDays, MapPin, Phone, ArrowRight, Zap } from 'lucide-react'
+import { CalendarDays, MapPin, Phone, ArrowRight } from 'lucide-react'
 import { format, isToday, isTomorrow } from 'date-fns'
 
 // Format number — always use digits, never letters

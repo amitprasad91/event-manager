@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
-import { ArrowLeft, Plus, X, Loader2, MapPin, Phone, ExternalLink, Pencil, Trash2, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Plus, X, Loader2, MapPin, Phone, Trash2, CheckCircle } from 'lucide-react'
 import { format } from 'date-fns'
 
 const ITEM_TYPES = ['machine', 'performer', 'supervisor', 'helper', 'transport', 'other']

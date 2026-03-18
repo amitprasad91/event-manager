@@ -44,10 +44,6 @@ export default function LoginPage() {
           0%,100% { transform: translateY(0) rotate(-5deg); }
           50%      { transform: translateY(-10px) rotate(5deg); }
         }
-        @keyframes shimmerText {
-          0%   { background-position: -200% center; }
-          100% { background-position:  200% center; }
-        }
         @keyframes riseUp {
           from { opacity:0; transform:translateY(24px); }
           to   { opacity:1; transform:translateY(0); }
