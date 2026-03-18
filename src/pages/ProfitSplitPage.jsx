@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
-import { Loader2, Plus, X, CheckCircle, TrendingUp, Split } from 'lucide-react'
+import { Loader2, Plus, X, CheckCircle, TrendingUp, GitBranch } from 'lucide-react'
 import { SPLIT_METHODS, fmtRs, calcProfit, getQuarterRange } from '../lib/constants'
 import { format } from 'date-fns'
 
@@ -144,7 +144,7 @@ export default function ProfitSplitPage() {
         <div style={{ textAlign: 'center', padding: 40 }}><Loader2 size={24} className="spin" style={{ color: 'var(--text-3)' }} /></div>
       ) : owners.length === 0 ? (
         <div className="empty-state">
-          <Split size={40} className="empty-state-icon" />
+          <GitBranch size={40} className="empty-state-icon" />
           <h3>No co-owners set up</h3>
           <p>Add co-owners first from the Co-Owners page</p>
         </div>

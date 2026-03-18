@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
-import { Plus, Search, X, Loader2, MapPin, Pencil, Trash2, Navigation, ExternalLink } from 'lucide-react'
+import { Plus, Search, X, Loader2, MapPin, Pencil, Trash2, Navigation } from 'lucide-react'
 import { openGoogleMaps } from '../lib/constants'
 
 function ConfirmDialog({ message, onConfirm, onCancel }) {

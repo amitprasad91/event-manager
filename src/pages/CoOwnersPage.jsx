@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
-import { Plus, Search, X, Loader2, Users2, Phone, Mail, Pencil, Trash2, TrendingUp } from 'lucide-react'
+import { Plus, Search, X, Loader2, Users2, Phone, Mail, Pencil, Trash2 } from 'lucide-react'
 import { fmtRs, SPLIT_METHODS, formatTel } from '../lib/constants'
 
 function ConfirmDialog({ onConfirm, onCancel }) {
