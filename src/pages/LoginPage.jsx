@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import toast from 'react-hot-toast'
 import { Loader2, Mail, Lock, CalendarDays, Users, CreditCard, Package } from 'lucide-react'
+import { APP_VERSION, BUILD_DATE } from '../version.js'
 
 export default function LoginPage() {
   const { signIn } = useAuth()
@@ -48,35 +49,70 @@ export default function LoginPage() {
       <div className="login-left">
         <div className="login-card">
 
-          {/* Brand — All Solutions / Kolkata */}
+          {/* ── Brand ── */}
           <div className="login-brand">
+            {/* Gradient icon badge */}
             <div style={{
-              fontFamily: 'Syne', fontWeight: 800, fontSize: '2rem',
-              color: '#ffffff', letterSpacing: '-0.04em', lineHeight: 1,
+              width: 48, height: 48, borderRadius: 14,
+              background: 'linear-gradient(135deg, #f0b429 0%, #ff8c42 50%, #ff5c7a 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '1.5rem', marginBottom: 14,
+              boxShadow: '0 6px 24px rgba(240,180,41,0.35)',
+            }}>
+              🎪
+            </div>
+            {/* Brand name — gradient text */}
+            <div style={{
+              fontFamily: 'Syne, sans-serif',
+              fontWeight: 800,
+              fontSize: '1.75rem',
+              letterSpacing: '-0.04em',
+              lineHeight: 1,
+              background: 'linear-gradient(135deg, #f0b429 0%, #ff8c42 60%, #ff5c7a 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              marginBottom: 6,
             }}>
               All Solutions
             </div>
+            {/* Kolkata — pill badge */}
             <div style={{
-              fontSize: '0.72rem', color: 'var(--text-3)',
-              letterSpacing: '0.12em', marginTop: 5,
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 100,
+              padding: '3px 10px',
+              fontSize: '0.65rem',
+              color: 'rgba(255,255,255,0.4)',
+              letterSpacing: '0.18em',
               textTransform: 'uppercase',
+              fontFamily: 'DM Sans, sans-serif',
+              fontWeight: 500,
             }}>
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#f0b429', display: 'inline-block', boxShadow: '0 0 6px #f0b429' }} />
               Kolkata
             </div>
           </div>
 
+          {/* ── Welcome ── */}
           <div className="login-welcome">
             <h1>Welcome back</h1>
             <p>Sign in to manage your events business</p>
           </div>
 
+          {/* ── Form ── */}
           <form onSubmit={handleSubmit} noValidate>
             <div className="form-group">
               <label className="form-label">Email Address</label>
               <div style={{ position: 'relative' }}>
-                <Mail size={14} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', pointerEvents: 'none' }} />
+                <Mail size={14} style={{
+                  position: 'absolute', left: 12, top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: 'rgba(255,255,255,0.25)', pointerEvents: 'none',
+                }} />
                 <input type="email" className="form-input"
-                  style={{ paddingLeft: 34, borderColor: errors.email ? 'var(--red)' : undefined }}
+                  style={{ paddingLeft: 36, borderColor: errors.email ? 'var(--red)' : undefined }}
                   placeholder="you@example.com"
                   value={email}
                   onChange={e => { setEmail(e.target.value); setErrors(p => ({...p, email: ''})) }}
@@ -89,9 +125,13 @@ export default function LoginPage() {
             <div className="form-group">
               <label className="form-label">Password</label>
               <div style={{ position: 'relative' }}>
-                <Lock size={14} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', pointerEvents: 'none' }} />
+                <Lock size={14} style={{
+                  position: 'absolute', left: 12, top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: 'rgba(255,255,255,0.25)', pointerEvents: 'none',
+                }} />
                 <input type="password" className="form-input"
-                  style={{ paddingLeft: 34, borderColor: errors.password ? 'var(--red)' : undefined }}
+                  style={{ paddingLeft: 36, borderColor: errors.password ? 'var(--red)' : undefined }}
                   placeholder="••••••••"
                   value={password}
                   onChange={e => { setPassword(e.target.value); setErrors(p => ({...p, password: ''})) }}
@@ -102,9 +142,10 @@ export default function LoginPage() {
 
             {errors.form && (
               <div style={{
-                background: 'var(--red-dim)', border: '1px solid rgba(224,92,92,0.3)',
-                borderRadius: 8, padding: '8px 12px', color: 'var(--red)',
-                fontSize: '0.8rem', marginBottom: 12
+                background: 'rgba(255,92,122,0.1)',
+                border: '1px solid rgba(255,92,122,0.3)',
+                borderRadius: 8, padding: '8px 12px',
+                color: '#ff5c7a', fontSize: '0.8rem', marginBottom: 12,
               }}>
                 {errors.form}
               </div>
@@ -117,13 +158,24 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p style={{ textAlign: 'center', marginTop: 20, fontSize: '0.75rem', color: 'var(--text-3)' }}>
+          {/* ── Footer ── */}
+          <p style={{ textAlign: 'center', marginTop: 20, fontSize: '0.75rem', color: 'rgba(255,255,255,0.2)' }}>
             Contact your admin to get access
           </p>
+
+          {/* ── Version badge ── */}
+          <p style={{
+            textAlign: 'center', marginTop: 8,
+            fontSize: '0.62rem', color: 'rgba(255,255,255,0.12)',
+            letterSpacing: '0.04em', fontFamily: 'DM Sans, sans-serif',
+          }}>
+            v{APP_VERSION} · {BUILD_DATE}
+          </p>
+
         </div>
       </div>
 
-      {/* Right decorative panel */}
+      {/* ── Right panel ── */}
       <div className="login-right">
         <div className="login-right-content">
           <div className="login-right-icon">🎪</div>
@@ -133,12 +185,17 @@ export default function LoginPage() {
             {features.map((f, i) => (
               <div key={i} className="login-feature">
                 <div className="login-feature-dot" />
-                <span style={{ color: 'var(--text-3)', display: 'flex', marginRight: 4 }}>{f.icon}</span>
+                <span style={{ color: 'rgba(255,255,255,0.3)', display: 'flex', marginRight: 4 }}>{f.icon}</span>
                 {f.text}
               </div>
             ))}
           </div>
-          <div style={{ marginTop: 28, paddingTop: 20, borderTop: '1px solid var(--border)', fontSize: '0.72rem', color: 'var(--text-3)', textAlign: 'center' }}>
+          <div style={{
+            marginTop: 28, paddingTop: 20,
+            borderTop: '1px solid rgba(255,255,255,0.06)',
+            fontSize: '0.68rem', color: 'rgba(255,255,255,0.2)',
+            textAlign: 'center',
+          }}>
             All Solutions · Kolkata
           </div>
         </div>
