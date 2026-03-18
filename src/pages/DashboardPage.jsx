@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { APP_VERSION, BUILD_DATE } from '../version.js'
 import { CalendarDays, MapPin, Phone, ArrowRight } from 'lucide-react'
+import { getEventTypeEmoji, fmtRs, fmt, COLORS } from '../lib/constants'
 import { format, isToday, isTomorrow } from 'date-fns'
 
 // Format number — always use digits, never letters
@@ -22,13 +23,13 @@ function fmtRs(n) {
 
 // Stat card — horizontal layout, big number right
 function StatCard({ label, value, sub, color, icon, prefix = '' }) {
-  const colors = {
-    gold:  { accent: '#f0b429', glow: 'rgba(240,180,41,0.15)',  bar: 'linear-gradient(90deg,#f0b429,#ff8c42)' },
-    green: { accent: '#10d4a0', glow: 'rgba(16,212,160,0.12)',  bar: 'linear-gradient(90deg,#10d4a0,#00e5cc)' },
-    red:   { accent: '#ff5c7a', glow: 'rgba(255,92,122,0.12)',  bar: 'linear-gradient(90deg,#ff5c7a,#ff8c42)' },
-    blue:  { accent: '#6c63ff', glow: 'rgba(108,99,255,0.12)',  bar: 'linear-gradient(90deg,#6c63ff,#3b9eff)' },
+  const colorMap = {
+    gold:  { accent: COLORS.gold.hex,  glow: COLORS.gold.glow,  bar: `linear-gradient(90deg,${COLORS.gold.hex},${COLORS.orange.hex})` },
+    green: { accent: COLORS.green.hex, glow: COLORS.green.glow, bar: `linear-gradient(90deg,${COLORS.green.hex},${COLORS.teal.hex})` },
+    red:   { accent: COLORS.red.hex,   glow: COLORS.red.glow,   bar: `linear-gradient(90deg,${COLORS.red.hex},${COLORS.orange.hex})` },
+    blue:  { accent: COLORS.blue.hex,  glow: COLORS.blue.glow,  bar: `linear-gradient(90deg,${COLORS.blue.hex},#3b9eff)` },
   }
-  const c = colors[color]
+  const c = colorMap[color]
   return (
     <div style={{
       background: 'var(--bg-2)',
@@ -156,8 +157,8 @@ export default function DashboardPage() {
             fontSize: '0.7rem', color: 'var(--text-3)',
             whiteSpace: 'nowrap',
           }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10d4a0', boxShadow: '0 0 6px #10d4a0', display: 'inline-block' }} />
-            <span style={{ color: '#10d4a0', fontWeight: 600 }}>LIVE</span>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: COLORS.green.hex, boxShadow: `0 0 6px ${COLORS.green.hex}`, display: 'inline-block' }} />
+            <span style={{ color: COLORS.green.hex, fontWeight: 600 }}>LIVE</span>
             · v{APP_VERSION}
           </div>
         </div>
@@ -227,7 +228,7 @@ export default function DashboardPage() {
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: '1rem',
                   }}>
-                    {ev.event_type === 'wedding' ? '💍' : ev.event_type === 'birthday' ? '🎂' : ev.event_type === 'office' ? '🏢' : '🎪'}
+                    {getEventTypeEmoji(ev.event_type)}
                   </div>
 
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -253,7 +254,7 @@ export default function DashboardPage() {
                     <span className={`badge ${dl.cls}`}>{dl.label}</span>
                     {ev.client_amount > 0 && (
                       <span style={{
-                        fontSize: '0.78rem', fontWeight: 700, color: '#f0b429',
+                        fontSize: '0.78rem', fontWeight: 700, color: COLORS.gold.hex,
                         fontFamily: '"DM Mono", monospace',
                       }}>
                         ₹{ev.client_amount.toLocaleString('en-IN')}
