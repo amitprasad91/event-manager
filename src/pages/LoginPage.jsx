@@ -52,7 +52,7 @@ export default function LoginPage() {
           <div className="login-brand">
             <div style={{
               fontFamily: 'Syne', fontWeight: 800, fontSize: '2rem',
-              color: #ffffff, letterSpacing: '-0.04em', lineHeight: 1,
+              color: '#ffffff', letterSpacing: '-0.04em', lineHeight: 1,
             }}>
               All Solutions
             </div>
