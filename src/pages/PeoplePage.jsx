@@ -1,10 +1,34 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
-import { Plus, Search, X, Loader2, Users, Phone, Pencil } from 'lucide-react'
+import { Plus, Search, X, Loader2, Users, Phone, Pencil, Trash2, ShieldCheck } from 'lucide-react'
 
 const ROLES = ['admin', 'supervisor', 'staff', 'driver']
 const PAY_TYPES = ['daily', 'hourly', 'per_km', 'fixed_per_event', 'monthly']
+
+function ConfirmDialog({ message, onConfirm, onCancel }) {
+  return (
+    <div className="confirm-overlay">
+      <div className="confirm-box">
+        <div style={{ fontSize: '2rem', marginBottom: 12 }}>🗑️</div>
+        <h3>Are you sure?</h3>
+        <p>{message}</p>
+        <div className="confirm-actions">
+          <button className="btn btn-secondary" onClick={onCancel}>Cancel</button>
+          <button className="btn btn-danger" onClick={onConfirm}>Yes, Delete</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function validate(form) {
+  const errors = {}
+  if (!form.full_name.trim()) errors.full_name = 'Name is required'
+  if (form.phone && !/^[0-9+\-\s]{7,15}$/.test(form.phone)) errors.phone = 'Enter a valid phone number'
+  if (form.pay_rate && isNaN(parseFloat(form.pay_rate))) errors.pay_rate = 'Must be a number'
+  return errors
+}
 
 export default function PeoplePage() {
   const [people, setPeople] = useState([])
@@ -13,6 +37,8 @@ export default function PeoplePage() {
   const [showModal, setShowModal] = useState(false)
   const [saving, setSaving] = useState(false)
   const [editing, setEditing] = useState(null)
+  const [confirmId, setConfirmId] = useState(null)
+  const [errors, setErrors] = useState({})
   const [form, setForm] = useState({ full_name: '', phone: '', role: 'staff', is_admin: false, pay_type: 'daily', pay_rate: '' })
 
   useEffect(() => { loadPeople() }, [])
@@ -26,34 +52,43 @@ export default function PeoplePage() {
 
   function openEdit(p) {
     setEditing(p)
+    setErrors({})
     setForm({ full_name: p.full_name, phone: p.phone || '', role: p.role, is_admin: p.is_admin, pay_type: p.pay_type || 'daily', pay_rate: p.pay_rate || '' })
     setShowModal(true)
   }
 
   function openNew() {
     setEditing(null)
+    setErrors({})
     setForm({ full_name: '', phone: '', role: 'staff', is_admin: false, pay_type: 'daily', pay_rate: '' })
     setShowModal(true)
   }
 
   async function handleSave(e) {
     e.preventDefault()
+    const errs = validate(form)
+    if (Object.keys(errs).length) { setErrors(errs); return }
     setSaving(true)
     const payload = { ...form, pay_rate: parseFloat(form.pay_rate) || 0 }
-    let error
     if (editing) {
-      ;({ error } = await supabase.from('profiles').update(payload).eq('id', editing.id))
+      const { error } = await supabase.from('profiles').update(payload).eq('id', editing.id)
+      setSaving(false)
+      if (error) { toast.error(error.message); return }
+      toast.success('Profile updated!')
     } else {
-      // Create auth user first via admin — for now just insert profile directly with a placeholder
-      // In production: use Supabase admin SDK or invite flow
-      toast('To add new staff, invite them via Supabase Auth or use the invite flow.', { icon: 'ℹ️' })
+      toast('To add new staff, invite them via Supabase Auth dashboard.', { icon: 'ℹ️' })
       setSaving(false)
       return
     }
-    setSaving(false)
-    if (error) { toast.error(error.message); return }
-    toast.success('Profile updated!')
     setShowModal(false)
+    loadPeople()
+  }
+
+  async function handleDelete(id) {
+    const { error } = await supabase.from('profiles').delete().eq('id', id)
+    setConfirmId(null)
+    if (error) { toast.error(error.message); return }
+    toast.success('Person removed!')
     loadPeople()
   }
 
@@ -63,52 +98,65 @@ export default function PeoplePage() {
   })
 
   function roleBadge(r) {
-    const map = { admin: 'badge-gold', supervisor: 'badge-orange', staff: 'badge-blue', driver: 'badge-green' }
-    return map[r] || 'badge-gray'
+    return { admin: 'badge-gold', supervisor: 'badge-orange', staff: 'badge-blue', driver: 'badge-green' }[r] || 'badge-gray'
   }
 
   return (
     <div>
+      {confirmId && (
+        <ConfirmDialog
+          message="This will remove the person from the system. This cannot be undone."
+          onConfirm={() => handleDelete(confirmId)}
+          onCancel={() => setConfirmId(null)}
+        />
+      )}
+
       <div className="page-header">
         <div>
           <div className="page-title">People & Staff</div>
           <div className="page-subtitle">{people.length} team members</div>
         </div>
-        <button className="btn btn-primary" onClick={openNew}><Plus size={15} /> Add Person</button>
+        <button className="btn btn-primary" onClick={openNew}><Plus size={14} /> Add Person</button>
       </div>
 
       <div className="search-bar">
-        <Search />
+        <Search size={15} />
         <input placeholder="Search by name, phone or role…" value={search} onChange={e => setSearch(e.target.value)} />
         {search && <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setSearch('')}><X size={13} /></button>}
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-3)' }}><Loader2 className="spin" /></div>
+        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-3)' }}><Loader2 size={24} className="spin" /></div>
       ) : filtered.length === 0 ? (
-        <div className="empty-state"><Users className="empty-state-icon" /><h3>No people found</h3></div>
+        <div className="empty-state"><Users size={40} className="empty-state-icon" /><h3>No people found</h3></div>
       ) : (
         <div className="card" style={{ padding: 0 }}>
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Name</th><th>Phone</th><th>Role</th><th>Admin</th><th>Pay Type</th><th>Rate (₹)</th><th></th></tr></thead>
+              <thead>
+                <tr>
+                  <th>Name</th><th>Phone</th><th>Role</th><th>Admin</th>
+                  <th>Pay Type</th><th>Rate (₹)</th><th>Actions</th>
+                </tr>
+              </thead>
               <tbody>
                 {filtered.map(p => (
                   <tr key={p.id}>
                     <td style={{ fontWeight: 600 }}>{p.full_name}</td>
                     <td>
-                      {p.phone ? (
-                        <a href={`tel:${p.phone}`} className="flex items-center gap-2" style={{ color: 'var(--blue)', fontSize: '0.875rem' }}>
-                          <Phone size={12} /> {p.phone}
-                        </a>
-                      ) : <span style={{ color: 'var(--text-3)' }}>—</span>}
+                      {p.phone
+                        ? <a href={`tel:${p.phone}`} style={{ color: 'var(--blue)', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.85rem' }}><Phone size={12} />{p.phone}</a>
+                        : <span style={{ color: 'var(--text-3)' }}>—</span>}
                     </td>
                     <td><span className={`badge ${roleBadge(p.role)}`}>{p.role}</span></td>
-                    <td>{p.is_admin ? <span className="badge badge-gold">Yes</span> : <span className="badge badge-gray">No</span>}</td>
-                    <td style={{ color: 'var(--text-2)', fontSize: '0.85rem' }}>{p.pay_type?.replace('_', ' ') || '—'}</td>
+                    <td>{p.is_admin ? <ShieldCheck size={15} style={{ color: 'var(--gold)' }} /> : <span style={{ color: 'var(--text-3)' }}>—</span>}</td>
+                    <td style={{ color: 'var(--text-2)', fontSize: '0.85rem' }}>{p.pay_type?.replace(/_/g, ' ') || '—'}</td>
                     <td style={{ color: 'var(--gold)', fontWeight: 600 }}>{p.pay_rate > 0 ? `₹${p.pay_rate}` : '—'}</td>
                     <td>
-                      <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(p)}><Pencil size={13} /></button>
+                      <div className="row-actions">
+                        <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(p)} title="Edit"><Pencil size={13} /></button>
+                        <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setConfirmId(p.id)} title="Delete" style={{ color: 'var(--red)' }}><Trash2 size={13} /></button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -125,15 +173,19 @@ export default function PeoplePage() {
               <span className="modal-title">{editing ? 'Edit Person' : 'Add Person'}</span>
               <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setShowModal(false)}><X size={16} /></button>
             </div>
-            <form onSubmit={handleSave}>
+            <form onSubmit={handleSave} noValidate>
               <div className="form-group">
                 <label className="form-label">Full Name *</label>
-                <input className="form-input" value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} required />
+                <input className="form-input" style={{ borderColor: errors.full_name ? 'var(--red)' : undefined }}
+                  value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} />
+                {errors.full_name && <div style={{ color: 'var(--red)', fontSize: '0.78rem', marginTop: 3 }}>{errors.full_name}</div>}
               </div>
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Phone</label>
-                  <input className="form-input" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} placeholder="+91 98765 43210" />
+                  <input className="form-input" style={{ borderColor: errors.phone ? 'var(--red)' : undefined }}
+                    value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} placeholder="+91 98765 43210" />
+                  {errors.phone && <div style={{ color: 'var(--red)', fontSize: '0.78rem', marginTop: 3 }}>{errors.phone}</div>}
                 </div>
                 <div className="form-group">
                   <label className="form-label">Role</label>
@@ -151,7 +203,9 @@ export default function PeoplePage() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Rate (₹)</label>
-                  <input type="number" className="form-input" value={form.pay_rate} onChange={e => setForm({...form, pay_rate: e.target.value})} placeholder="0" />
+                  <input type="number" className="form-input" style={{ borderColor: errors.pay_rate ? 'var(--red)' : undefined }}
+                    value={form.pay_rate} onChange={e => setForm({...form, pay_rate: e.target.value})} placeholder="0" />
+                  {errors.pay_rate && <div style={{ color: 'var(--red)', fontSize: '0.78rem', marginTop: 3 }}>{errors.pay_rate}</div>}
                 </div>
               </div>
               <div className="form-group">
@@ -163,7 +217,7 @@ export default function PeoplePage() {
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
                 <button type="submit" className="btn btn-primary" disabled={saving}>
-                  {saving ? <Loader2 size={14} /> : editing ? 'Save Changes' : 'Add Person'}
+                  {saving ? <Loader2 size={14} className="spin" /> : editing ? 'Save Changes' : 'Add Person'}
                 </button>
               </div>
             </form>
