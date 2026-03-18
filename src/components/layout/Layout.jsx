@@ -58,72 +58,99 @@ export default function Layout() {
         {/* Footer */}
         <div className="sidebar-footer">
 
-          {/* User pill — includes logout icon on right */}
-          <div className="user-pill">
-            <div className="user-avatar">{initials}</div>
-            <div className="user-info">
-              <div className="user-name">{profile?.full_name || 'User'}</div>
-              <div className="user-role">{profile?.role || 'staff'}</div>
-            </div>
-            {/* Logout inside user pill */}
-            <button
-              onClick={signOut}
-              title="Sign out"
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                color: 'rgba(255,255,255,0.3)', padding: '4px',
-                borderRadius: 6, transition: 'color 0.15s',
-                display: 'flex', alignItems: 'center',
-                flexShrink: 0,
-              }}
-              onMouseEnter={e => e.currentTarget.style.color = '#ff5c7a'}
-              onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}
-            >
-              <LogOut size={14} />
-            </button>
-          </div>
-
-          <div className="sidebar-divider" />
-
-          {/* Theme toggle */}
+          {/* Theme + Install */}
           <button onClick={toggleTheme} className="sidebar-action">
             {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
             {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
           </button>
-
-          {/* PWA Install */}
           <PWAInstallButton />
 
           <div className="sidebar-divider" />
 
           {/* Version */}
           <VersionBadge />
+
+          <div className="sidebar-divider" />
+
+          {/* ── User + Sign Out — full width button at very bottom ── */}
+          <button
+            onClick={signOut}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              width: '100%',
+              padding: '10px 12px',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.07)',
+              borderRadius: 10,
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+              textAlign: 'left',
+              fontFamily: 'DM Sans, sans-serif',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'rgba(255,92,122,0.10)'
+              e.currentTarget.style.borderColor = 'rgba(255,92,122,0.25)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'
+            }}
+          >
+            {/* Avatar */}
+            <div style={{
+              width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+              background: 'linear-gradient(135deg,#f0b429,#ff8c42)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontFamily: 'Syne,sans-serif', fontSize: '0.72rem',
+              fontWeight: 800, color: '#1a0800',
+              boxShadow: '0 2px 8px rgba(240,180,41,0.25)',
+            }}>
+              {initials}
+            </div>
+
+            {/* Name + role */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{
+                fontSize: '0.82rem', fontWeight: 600,
+                color: 'rgba(255,255,255,0.85)',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {profile?.full_name || 'User'}
+              </div>
+              <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', textTransform: 'capitalize' }}>
+                {profile?.role || 'staff'}
+              </div>
+            </div>
+
+            {/* Sign out icon */}
+            <LogOut size={14} style={{ color: 'rgba(255,92,122,0.7)', flexShrink: 0 }} />
+          </button>
         </div>
       </aside>
 
       <div className="main-content">
-        {/* Mobile header — menu button NOT hidden by footer */}
+        {/* Mobile header */}
         <header className="mobile-header">
           <button
             className="hamburger"
             onClick={() => setSidebarOpen(v => !v)}
-            style={{ zIndex: 201, position: 'relative' }}
+            aria-label="Toggle menu"
           >
             {sidebarOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
 
-          {/* Text-only brand */}
           <div style={{ textAlign: 'center' }}>
             <div style={{
-              fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1rem',
-              background: 'linear-gradient(135deg, #f0b429, #ff8c42)',
+              fontFamily: 'Syne,sans-serif', fontWeight: 800, fontSize: '1rem',
+              background: 'linear-gradient(135deg,#f0b429,#ff8c42)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text', letterSpacing: '-0.02em', lineHeight: 1.1,
+              backgroundClip: 'text', letterSpacing: '-.02em', lineHeight: 1.1,
             }}>All Solutions</div>
-            <div style={{
-              fontSize: '0.55rem', color: 'rgba(255,255,255,0.25)',
-              letterSpacing: '0.14em', textTransform: 'uppercase',
-            }}>Kolkata</div>
+            <div style={{ fontSize: '.55rem', color: 'rgba(255,255,255,.25)', letterSpacing: '.14em', textTransform: 'uppercase' }}>
+              Kolkata
+            </div>
           </div>
 
           <button onClick={toggleTheme} className="btn btn-ghost btn-icon btn-sm">
