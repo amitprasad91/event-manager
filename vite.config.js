@@ -1,39 +1,58 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { VitePWA } from 'vite-plugin-pwa'
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
+import { Toaster } from 'react-hot-toast'
+import App from './App.jsx'
+import { AuthProvider } from './context/AuthContext.jsx'
+import { ThemeProvider } from './context/ThemeContext.jsx'
+import './index.css'
 
-export default defineConfig({
-  plugins: [
-    react(),
-    VitePWA({
-      registerType: 'prompt', // shows install prompt instead of auto-update silently
-      includeAssets: ['favicon.svg', 'favicon.ico', 'apple-touch-icon.png'],
-      manifest: {
-        name: 'EventMgr - Event Business Manager',
-        short_name: 'EventMgr',
-        description: 'Manage your event business — bookings, staff, payments',
-        theme_color: '#0c0c0a',
-        background_color: '#0c0c0a',
-        display: 'standalone',
-        orientation: 'portrait-primary',
-        scope: '/',
-        start_url: '/',
-        icons: [
-          { src: '/pwa-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
-          { src: '/pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
-        ]
-      },
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
-            handler: 'NetworkFirst',
-            options: { cacheName: 'supabase-api', networkTimeoutSeconds: 10 }
-          }
-        ]
-      },
-      devOptions: { enabled: true } // test PWA in dev mode too
-    })
-  ],
+// ── Suppress browser-extension-caused async message channel errors ──
+// This error originates from browser extensions (LastPass, Grammarly, etc.)
+// intercepting service worker messages. It's not an app bug.
+const _origError = console.error.bind(console)
+console.error = (...args) => {
+  const msg = args[0]?.toString?.() || ''
+  if (
+    msg.includes('message channel closed') ||
+    msg.includes('listener indicated an asynchronous response') ||
+    msg.includes('asynchronous response')
+  ) return // suppress safely
+  _origError(...args)
+}
+
+// Also suppress at window level
+window.addEventListener('unhandledrejection', (event) => {
+  const msg = event.reason?.message || event.reason?.toString() || ''
+  if (
+    msg.includes('message channel closed') ||
+    msg.includes('asynchronous response') ||
+    msg.includes('listener indicated')
+  ) {
+    event.preventDefault() // suppress
+  }
 })
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <BrowserRouter>
+      <ThemeProvider>
+        <AuthProvider>
+          <App />
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              style: {
+                background: 'var(--bg-2)',
+                color: 'var(--text)',
+                border: '1px solid var(--border)',
+                fontFamily: 'DM Sans, sans-serif',
+                fontSize: '0.875rem',
+              },
+            }}
+          />
+        </AuthProvider>
+      </ThemeProvider>
+    </BrowserRouter>
+  </React.StrictMode>
+)
