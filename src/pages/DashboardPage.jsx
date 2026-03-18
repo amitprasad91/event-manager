@@ -7,20 +7,7 @@ import { CalendarDays, MapPin, Phone, ArrowRight } from 'lucide-react'
 import { getEventTypeEmoji, fmtRs, fmt, COLORS } from '../lib/constants'
 import { format, isToday, isTomorrow } from 'date-fns'
 
-// Format number — always use digits, never letters
-function fmt(n) {
-  if (n === 0 || n === undefined || n === null) return '0'
-  if (n >= 100000) return `${(n/100000).toFixed(1)}L`
-  if (n >= 1000) return `${(n/1000).toFixed(1)}k`
-  return `${n}`
-}
-function fmtRs(n) {
-  if (n === 0 || n === undefined || n === null) return '₹0'
-  if (n >= 100000) return `₹${(n/100000).toFixed(1)}L`
-  if (n >= 1000) return `₹${(n/1000).toFixed(1)}k`
-  return `₹${n}`
-}
-
+// fmt and fmtRs imported from lib/constants
 // Stat card — horizontal layout, big number right
 function StatCard({ label, value, sub, color, icon, prefix = '' }) {
   const colorMap = {
