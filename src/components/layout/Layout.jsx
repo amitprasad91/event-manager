@@ -6,38 +6,26 @@ import PWAInstallButton from '../PWAInstall'
 import VersionBadge from '../VersionBadge'
 import {
   LayoutDashboard, CalendarDays, Users, UserCircle,
-  Package, CreditCard, Menu, LogOut, Sun, Moon
+  Package, CreditCard, Menu, LogOut, Sun, Moon, Download
 } from 'lucide-react'
 
 const NAV = [
-  { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
-  { label: 'Events', to: '/events', icon: CalendarDays },
-  { label: 'People', to: '/people', icon: Users },
-  { label: 'Clients', to: '/clients', icon: UserCircle },
+  { label: 'Dashboard',      to: '/dashboard', icon: LayoutDashboard },
+  { label: 'Events',         to: '/events',    icon: CalendarDays },
+  { label: 'People',         to: '/people',    icon: Users },
+  { label: 'Clients',        to: '/clients',   icon: UserCircle },
   { label: 'Machines & Items', to: '/machines', icon: Package },
-  { label: 'Payments', to: '/payments', icon: CreditCard },
+  { label: 'Payments',       to: '/payments',  icon: CreditCard },
 ]
 
-// Brand component — reused in sidebar + mobile header
-export function Brand({ size = 'md' }) {
-  const isLg = size === 'lg'
+// Brand — used in sidebar + mobile header
+export function Brand() {
   return (
-    <div>
-      <div style={{
-        fontFamily: 'Syne', fontWeight: 800,
-        fontSize: isLg ? '1.25rem' : '1.1rem',
-        color: 'var(--gold)', letterSpacing: '-0.03em',
-        lineHeight: 1.1,
-      }}>
-        All Solutions
-      </div>
-      <div style={{
-        fontSize: isLg ? '0.72rem' : '0.65rem',
-        color: 'var(--text-3)',
-        letterSpacing: '0.08em',
-        marginTop: 2,
-      }}>
-        Kolkata
+    <div className="brand-mark">
+      <div className="brand-icon">🎪</div>
+      <div>
+        <div className="brand-text-main">All Solutions</div>
+        <div className="brand-text-sub">Kolkata</div>
       </div>
     </div>
   )
@@ -59,7 +47,7 @@ export default function Layout() {
           <Brand />
         </div>
 
-        {/* Nav links */}
+        {/* Nav */}
         <nav className="sidebar-nav">
           <div className="nav-section-label">Menu</div>
           {NAV.map(({ label, to, icon: Icon }) => (
@@ -72,29 +60,36 @@ export default function Layout() {
           ))}
         </nav>
 
-        {/* Footer */}
+        {/* Footer — all actions look like nav items */}
         <div className="sidebar-footer">
-          {/* Theme toggle */}
-          <button onClick={toggleTheme} className="theme-toggle"
-            style={{ width: '100%', marginBottom: 8, justifyContent: 'center' }}>
-            {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
-            {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-          </button>
 
-          {/* User pill */}
-          <div className="user-pill" style={{ marginBottom: 10 }}>
+          {/* User info */}
+          <div className="user-pill">
             <div className="user-avatar">{initials}</div>
             <div className="user-info">
               <div className="user-name">{profile?.full_name || 'User'}</div>
               <div className="user-role">{profile?.role || 'staff'}</div>
             </div>
-            <button className="btn btn-ghost btn-icon" onClick={signOut} title="Sign out">
-              <LogOut size={14} />
-            </button>
           </div>
 
-          {/* PWA Install button — always visible */}
+          <div className="sidebar-divider" />
+
+          {/* Theme toggle — nav style */}
+          <button onClick={toggleTheme} className="sidebar-action">
+            {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+            {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+          </button>
+
+          {/* PWA Install — nav style, gold */}
           <PWAInstallButton />
+
+          {/* Logout — nav style, red */}
+          <button onClick={signOut} className="sidebar-action logout">
+            <LogOut size={15} />
+            Sign Out
+          </button>
+
+          <div className="sidebar-divider" />
 
           {/* Version — very bottom */}
           <VersionBadge />
@@ -107,8 +102,7 @@ export default function Layout() {
           <button className="hamburger" onClick={() => setSidebarOpen(true)}>
             <Menu size={22} />
           </button>
-          {/* Brand in mobile header */}
-          <Brand size="md" />
+          <Brand />
           <button onClick={toggleTheme} className="btn btn-ghost btn-icon btn-sm">
             {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </button>
