@@ -146,7 +146,6 @@ export default function PWAInstallButton() {
           {/* Arrow */}
           <div style={{
             position: 'absolute', bottom: -7, left: '50%',
-            transform: 'translateX(-50%)',
             width: 12, height: 12,
             background: '#0e1420',
             border: '1px solid rgba(240,180,41,0.2)',

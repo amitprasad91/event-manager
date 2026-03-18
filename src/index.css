@@ -552,8 +552,15 @@ tr:hover td { background: var(--bg-3); }
   display: flex; align-items: flex-start; justify-content: space-between;
   margin-bottom: 24px; gap: 16px; flex-wrap: wrap;
 }
-.page-title { font-size: 1.65rem; font-weight: 800; letter-spacing: -0.03em; }
+.page-title { font-size: 1.65rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.4; padding-bottom: 0.05em; overflow: visible; }
 .page-subtitle { color: var(--text-3); font-size: 0.875rem; margin-top: 4px; }
+
+/* ── TYPOGRAPHY DESCENDER FIX ── */
+/* Syne and Cormorant Garamond have deep descenders — ensure they never clip */
+h1, h2, h3, .page-title, .card-title, .modal-title, .nav-section-label {
+  overflow: visible;
+  line-height: 1.4;
+}
 
 /* ── SEARCH BAR ── */
 .search-bar {

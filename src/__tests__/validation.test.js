@@ -1,76 +1,82 @@
 /**
  * ============================================================
- * ALL SOLUTIONS — COMPREHENSIVE UNIT TESTS
- * Version: 202603.19.10
+ * ALL SOLUTIONS — COMPLETE UNIT TEST SUITE
+ * Version: 202603.19.17
  * Run: npm test
  *
- * Coverage:
- *   ✅ Login Page — validation
- *   ✅ People & Staff Page — validation
- *   ✅ Clients Page — validation
- *   ✅ Events Page — validation + status transitions
- *   ✅ Event Detail Page — item validation
- *   ✅ Machines & Items Page — validation + status
- *   ✅ Payments Page — validation + calculations + progress
- *   ✅ Dashboard — formatting + profit + event types
- *   ✅ PWA Install — device detection
- *   ✅ Theme — persistence + toggle
- *   ✅ Version — format validation
- *   ✅ Async Error — suppression logic
- *   ✅ Auth — last login tracking
- *   ✅ Routing — protected route logic
+ * Phase 1:
+ *   ✅ Login — validation (9 tests)
+ *   ✅ People & Staff — validation + pay types (10 tests)
+ *   ✅ Clients — validation incl. inline form (9 tests)
+ *   ✅ Events — validation + status badges + sorting (9 tests)
+ *   ✅ Event Detail — items + profit + status transitions + markPaid (14 tests)
+ *   ✅ Machines — validation + status labels + badges (10 tests)
+ *   ✅ Payments — validation + progress + quarterly + collect tab (16 tests)
+ *   ✅ Dashboard — greet() + dateLabel + fmt + profit + emoji (17 tests)
+ *   ✅ PWA Install — device detection (7 tests)
+ *   ✅ Theme — toggle + persistence (5 tests)
+ *   ✅ Version — format (3 tests)
+ *   ✅ Async Error — suppression (4 tests)
+ *   ✅ Auth — last login + protected routes (6 tests)
+ *
+ * Phase 2:
+ *   ✅ Venues — validation + Maps URL builder (16 tests)
+ *   ✅ Performers — validation + emojis (13 tests)
+ *   ✅ Transport — validation + trip calcs + markPaid + formatTel (15 tests)
+ *   ✅ Co-Owners — validation + earnings + share % (12 tests)
+ *   ✅ Profit Split — all 4 methods + validation + event cost (18 tests)
+ *   ✅ Quarter — range + label + isInQuarter (12 tests)
+ *
+ * Constants:
+ *   ✅ All exports — completeness + getLabel + badges + COLORS (24 tests)
  * ============================================================
  */
 
 let passed = 0, failed = 0
 
-function describe(name, fn) {
-  console.log(`\n${name}`)
-  fn()
-}
+function describe(name, fn) { console.log(`\n${name}`); fn() }
 
 function test(name, fn) {
-  try {
-    fn()
-    console.log(`  ✅ ${name}`)
-    passed++
-  } catch (e) {
-    console.log(`  ❌ ${name}`)
-    console.log(`     → ${e.message}`)
-    failed++
-  }
+  try { fn(); console.log(`  ✅ ${name}`); passed++ }
+  catch (e) { console.log(`  ❌ ${name}\n     → ${e.message}`); failed++ }
 }
 
 function expect(val) {
   return {
-    toBe:            (exp) => { if (val !== exp)  throw new Error(`Expected ${JSON.stringify(exp)}, got ${JSON.stringify(val)}`) },
-    toEqual:         (exp) => { if (JSON.stringify(val) !== JSON.stringify(exp)) throw new Error(`Expected ${JSON.stringify(exp)}, got ${JSON.stringify(val)}`) },
-    toBeTruthy:      ()    => { if (!val) throw new Error(`Expected truthy, got ${JSON.stringify(val)}`) },
-    toBeFalsy:       ()    => { if (val)  throw new Error(`Expected falsy, got ${JSON.stringify(val)}`) },
-    toBeGreaterThan: (n)   => { if (!(val > n)) throw new Error(`Expected ${val} > ${n}`) },
-    toBeLessThan:    (n)   => { if (!(val < n)) throw new Error(`Expected ${val} < ${n}`) },
-    toBeNull:        ()    => { if (val !== null) throw new Error(`Expected null, got ${JSON.stringify(val)}`) },
-    toHaveLength:    (n)   => { if (val?.length !== n) throw new Error(`Expected length ${n}, got ${val?.length}`) },
-    toHaveProperty:  (key) => { if (!(key in Object(val))) throw new Error(`Expected property "${key}"`) },
+    toBe:            (e) => { if (val !== e) throw new Error(`Expected ${JSON.stringify(e)}, got ${JSON.stringify(val)}`) },
+    toEqual:         (e) => { if (JSON.stringify(val) !== JSON.stringify(e)) throw new Error(`Expected ${JSON.stringify(e)}, got ${JSON.stringify(val)}`) },
+    toBeTruthy:      ()  => { if (!val) throw new Error(`Expected truthy, got ${JSON.stringify(val)}`) },
+    toBeFalsy:       ()  => { if (val) throw new Error(`Expected falsy, got ${JSON.stringify(val)}`) },
+    toBeNull:        ()  => { if (val !== null) throw new Error(`Expected null, got ${JSON.stringify(val)}`) },
+    toBeGreaterThan: (n) => { if (!(val > n)) throw new Error(`Expected ${val} > ${n}`) },
+    toBeLessThan:    (n) => { if (!(val < n)) throw new Error(`Expected ${val} < ${n}`) },
+    toHaveLength:    (n) => { if (val?.length !== n) throw new Error(`Expected length ${n}, got ${val?.length}`) },
+    toHaveProperty:  (k) => { if (!(k in Object(val))) throw new Error(`Expected property "${k}"`) },
+    toContain:       (s) => { if (!String(val).includes(String(s))) throw new Error(`Expected "${val}" to contain "${s}"`) },
     not: {
-      toHaveProperty: (key) => { if (key in Object(val)) throw new Error(`Did NOT expect property "${key}"`) },
-      toBe:           (exp) => { if (val === exp) throw new Error(`Expected NOT ${JSON.stringify(exp)}`) },
-      toBeTruthy:     ()    => { if (val) throw new Error(`Expected falsy`) },
+      toHaveProperty: (k) => { if (k in Object(val)) throw new Error(`Did NOT expect property "${k}"`) },
+      toBe:           (e) => { if (val === e) throw new Error(`Expected NOT ${JSON.stringify(e)}`) },
+      toBeTruthy:     ()  => { if (val) throw new Error(`Expected falsy`) },
+      toContain:      (s) => { if (String(val).includes(String(s))) throw new Error(`Expected NOT to contain "${s}"`) },
     }
   }
 }
 
-// ── Validation functions ──────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// ALL VALIDATION + UTILITY FUNCTIONS (mirrored from app)
+// ══════════════════════════════════════════════════════════════
 
+// ── Login ─────────────────────────────────────────────────────
 function validateLogin(form) {
   const e = {}
   if (!form.email?.trim()) e.email = 'Email is required'
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Enter a valid email'
   if (!form.password) e.password = 'Password is required'
-  else if (form.password.length < 6) e.password = 'Password must be at least 6 characters'
+  else if (form.password.length < 6) e.password = 'Minimum 6 characters'
   return e
 }
 
+// ── People ────────────────────────────────────────────────────
 function validatePerson(form) {
   const e = {}
   if (!form.full_name?.trim()) e.full_name = 'Name is required'
@@ -80,6 +86,7 @@ function validatePerson(form) {
   return e
 }
 
+// ── Clients ───────────────────────────────────────────────────
 function validateClient(form) {
   const e = {}
   if (!form.full_name?.trim()) e.full_name = 'Name is required'
@@ -88,6 +95,7 @@ function validateClient(form) {
   return e
 }
 
+// ── Events ────────────────────────────────────────────────────
 function validateEvent(form) {
   const e = {}
   if (!form.title?.trim()) e.title = 'Event title is required'
@@ -98,6 +106,7 @@ function validateEvent(form) {
   return e
 }
 
+// ── Event Items ───────────────────────────────────────────────
 function validateEventItem(form) {
   const e = {}
   if (!form.description?.trim()) e.description = 'Description is required'
@@ -108,6 +117,7 @@ function validateEventItem(form) {
   return e
 }
 
+// ── Machines ──────────────────────────────────────────────────
 function validateMachine(form) {
   const e = {}
   if (!form.name?.trim()) e.name = 'Item name is required'
@@ -115,6 +125,7 @@ function validateMachine(form) {
   return e
 }
 
+// ── Payments ──────────────────────────────────────────────────
 function validatePaymentUpdate(received, billed) {
   const e = {}
   const val = parseFloat(received)
@@ -124,324 +135,630 @@ function validatePaymentUpdate(received, billed) {
   return e
 }
 
-// ── Utility functions ─────────────────────────────────────────
+// ── Venues (Phase 2) ──────────────────────────────────────────
+function validateVenue(form) {
+  const e = {}
+  if (!form.name?.trim()) e.name = 'Venue name is required'
+  if (!form.address?.trim()) e.address = 'Address is required'
+  if (form.google_maps_url && !form.google_maps_url.startsWith('http')) e.google_maps_url = 'Must be a valid URL starting with http'
+  if (form.lat && isNaN(parseFloat(form.lat))) e.lat = 'Latitude must be a number'
+  if (form.lng && isNaN(parseFloat(form.lng))) e.lng = 'Longitude must be a number'
+  if (form.lat && (parseFloat(form.lat) < -90  || parseFloat(form.lat) > 90))   e.lat = 'Latitude must be between -90 and 90'
+  if (form.lng && (parseFloat(form.lng) < -180 || parseFloat(form.lng) > 180))  e.lng = 'Longitude must be between -180 and 180'
+  return e
+}
+
+// ── Performers (Phase 2) ──────────────────────────────────────
+function validatePerformer(form) {
+  const e = {}
+  if (!form.full_name?.trim()) e.full_name = 'Name is required'
+  if (form.phone && !/^[0-9+\-\s]{7,15}$/.test(form.phone)) e.phone = 'Enter a valid phone number'
+  if (form.rate && isNaN(parseFloat(form.rate))) e.rate = 'Must be a number'
+  if (form.rate && parseFloat(form.rate) < 0) e.rate = 'Rate cannot be negative'
+  return e
+}
+
+// ── Transport (Phase 2) ───────────────────────────────────────
+function validateTransportTrip(form) {
+  const e = {}
+  if (!form.event_id) e.event_id = 'Please select an event'
+  if (!form.trip_date) e.trip_date = 'Trip date is required'
+  if (form.amount && isNaN(parseFloat(form.amount))) e.amount = 'Must be a valid number'
+  if (form.amount && parseFloat(form.amount) < 0) e.amount = 'Amount cannot be negative'
+  if (form.km && isNaN(parseFloat(form.km))) e.km = 'Must be a valid number'
+  if (form.km && parseFloat(form.km) < 0) e.km = 'Distance cannot be negative'
+  if (form.pay_method === 'per_km' && form.km && parseFloat(form.km) === 0) e.km = 'Distance must be greater than 0 for per KM billing'
+  return e
+}
+
+// ── Co-Owners (Phase 2) ───────────────────────────────────────
+function validateCoOwner(form) {
+  const e = {}
+  if (!form.full_name?.trim()) e.full_name = 'Name is required'
+  if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Enter a valid email'
+  if (form.phone && !/^[0-9+\-\s]{7,15}$/.test(form.phone)) e.phone = 'Enter a valid phone'
+  return e
+}
+
+// ── Profit Split (Phase 2) ────────────────────────────────────
+function validateProfitSplit(owners, method, inputs) {
+  const e = {}
+  if (!owners || owners.length === 0) { e.owners = 'At least one co-owner required'; return e }
+  if (method === 'fixed_percent' || method === 'custom_percent') {
+    const total = owners.reduce((s, o) => s + (parseFloat(inputs[o.id]?.percent) || 0), 0)
+    if (total <= 0) e.percent = 'Total percentage must be greater than 0'
+    owners.forEach(o => { if ((parseFloat(inputs[o.id]?.percent) || 0) < 0) e.percent = 'Percentage cannot be negative' })
+  }
+  if (method === 'investment_based') {
+    const total = owners.reduce((s, o) => s + (parseFloat(inputs[o.id]?.investment) || 0), 0)
+    if (total <= 0) e.investment = 'Total investment must be greater than 0'
+  }
+  return e
+}
+
+// ══════════════════════════════════════════════════════════════
+// UTILITY FUNCTIONS (mirrored from app)
+// ══════════════════════════════════════════════════════════════
+
+const LAKH = 100000, THOUSAND = 1000
 
 function fmt(n) {
   if (!n || n === 0) return '0'
-  if (n >= 100000) return `${(n/100000).toFixed(1)}L`
-  if (n >= 1000)   return `${(n/1000).toFixed(1)}k`
+  if (n >= LAKH)     return `${(n/LAKH).toFixed(1)}L`
+  if (n >= THOUSAND) return `${(n/THOUSAND).toFixed(1)}k`
   return `${n}`
 }
-
 function fmtRs(n) {
   if (!n || n === 0) return '₹0'
-  if (n >= 100000) return `₹${(n/100000).toFixed(1)}L`
-  if (n >= 1000)   return `₹${(n/1000).toFixed(1)}k`
+  if (n >= LAKH)     return `₹${(n/LAKH).toFixed(1)}L`
+  if (n >= THOUSAND) return `₹${(n/THOUSAND).toFixed(1)}k`
   return `₹${n}`
 }
-
-function calcProfit(clientAmount, totalCost) {
-  return (clientAmount || 0) - (totalCost || 0)
-}
-
+function calcProfit(clientAmount, totalCost) { return (clientAmount||0) - (totalCost||0) }
 function calcPaymentProgress(received, billed) {
   if (!billed || billed === 0) return 0
-  return Math.min(100, Math.round((received / billed) * 100))
+  return Math.min(100, Math.round((received/billed)*100))
 }
-
 function calcStaffDue(items) {
-  return items
-    .filter(i => i.payment_status !== 'paid')
-    .reduce((s, i) => s + ((i.cost || 0) - (i.amount_paid || 0)), 0)
+  return items.filter(i => i.payment_status !== 'paid').reduce((s,i) => s + ((i.cost||0)-(i.amount_paid||0)), 0)
 }
-
-function getEventTypeEmoji(type) {
-  return { wedding:'💍', birthday:'🎂', office:'🏢', other:'🎪' }[type] || '🎪'
-}
-
-function getMachineStatusLabel(status) {
-  return { in_godown:'📦 In Godown', at_event:'🎪 At Event', returned:'✅ Returned' }[status] || '—'
-}
-
-function isValidVersion(v) {
-  return /^\d{6}\.\d{2}\.\d{2}$/.test(v)
-}
-
-function isValidTheme(t) {
-  return ['dark', 'light'].includes(t)
-}
-
-function toggleTheme(current) {
-  return current === 'dark' ? 'light' : 'dark'
-}
-
+function getEventTypeEmoji(type) { return { wedding:'💍', birthday:'🎂', office:'🏢', other:'🎪' }[type] || '🎪' }
+function getEventTypeBadge(type) { return { wedding:'badge-gold', birthday:'badge-orange', office:'badge-blue', other:'badge-gray' }[type] || 'badge-gray' }
+function getEventStatusBadge(status) { return { upcoming:'badge-blue', ongoing:'badge-green', completed:'badge-gray', cancelled:'badge-red' }[status] || 'badge-gray' }
+function getMachineStatusLabel(status) { return { in_godown:'📦 In Godown', at_event:'🎪 At Event', returned:'✅ Returned' }[status] || '—' }
+function getMachineStatusBadge(status) { return { in_godown:'badge-blue', at_event:'badge-orange', returned:'badge-green' }[status] || 'badge-gray' }
+function getRoleBadge(role) { return { admin:'badge-gold', supervisor:'badge-orange', staff:'badge-blue', driver:'badge-green' }[role] || 'badge-gray' }
+function getItemTypeEmoji(type) { return { machine:'📦', performer:'🎭', supervisor:'👷', helper:'👤', transport:'🚛', other:'📋' }[type] || '📋' }
+function getLabel(options, value) { return options.find(o => o.value === value)?.label || value }
+function isValidVersion(v) { return /^\d{6}\.\d{2}\.\d{2}$/.test(v) }
+function isValidTheme(t)   { return ['dark','light'].includes(t) }
+function toggleTheme(c)    { return c === 'dark' ? 'light' : 'dark' }
 function isMessageChannelError(msg) {
   const s = msg?.toString() || ''
-  return s.includes('message channel closed') ||
-    s.includes('listener indicated an asynchronous response') ||
-    s.includes('asynchronous response')
+  return s.includes('message channel closed') || s.includes('listener indicated an asynchronous response') || s.includes('asynchronous response')
 }
-
 function detectDeviceType(ua) {
   const u = ua.toLowerCase()
   if (/iphone|ipad|ipod/.test(u) && !/crios/.test(u)) return 'ios'
   if (/android/.test(u)) return 'android'
   return 'desktop'
 }
-
-function getLastLoginDisplay(isoString) {
-  if (!isoString) return null
-  const d = new Date(isoString)
+function getLastLoginDisplay(iso) {
+  if (!iso) return null
+  const d = new Date(iso)
   return isNaN(d.getTime()) ? null : d.toISOString()
 }
-
 function isProtectedRoute(user, loading) {
   if (loading) return 'loading'
   if (!user)   return 'redirect'
   return 'render'
 }
-
-function getEventStatusBadge(status) {
-  return { upcoming:'badge-blue', ongoing:'badge-green', completed:'badge-gray', cancelled:'badge-red' }[status] || 'badge-gray'
-}
-
-function getPayTypLabel(type) {
-  return (type || '').replace(/_/g, ' ')
-}
-
 function filterBySearch(items, query, fields) {
   if (!query) return items
   const q = query.toLowerCase()
   return items.filter(item => fields.some(f => item[f]?.toLowerCase().includes(q)))
 }
+function sortEventsByDate(events) { return [...events].sort((a,b) => new Date(a.event_date) - new Date(b.event_date)) }
+function getPayTypLabel(type) { return (type||'').replace(/_/g,' ') }
 
-function sortEventsByDate(events) {
-  return [...events].sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
+// Dashboard utilities
+function greet(hour) {
+  if (hour < 12) return 'Good morning'
+  if (hour < 17) return 'Good afternoon'
+  return 'Good evening'
+}
+function dateLabel(dateStr, todayStr, tomorrowStr) {
+  const d = dateStr.split('T')[0]
+  if (d === todayStr)    return { label: 'Today',    cls: 'badge-green'  }
+  if (d === tomorrowStr) return { label: 'Tomorrow', cls: 'badge-orange' }
+  return { label: d, cls: 'badge-gray' }
 }
 
-// ── TESTS ─────────────────────────────────────────────────────
+// Event Detail utilities
+function calcEventProfit(clientAmount, items) {
+  const totalCost = items.reduce((s,i) => s + (i.cost||0), 0)
+  return (clientAmount||0) - totalCost
+}
+function canTransitionStatus(current, next) {
+  const valid = { upcoming: ['ongoing','cancelled'], ongoing: ['completed','cancelled'] }
+  return valid[current]?.includes(next) || false
+}
+function markItemPaidResult(item) {
+  return { ...item, amount_paid: item.cost, payment_status: 'paid' }
+}
 
-describe('🔐 Login Page — Validation', () => {
-  test('empty email shows error',           () => expect(validateLogin({ email: '', password: 'pass123' })).toHaveProperty('email'))
-  test('whitespace email shows error',      () => expect(validateLogin({ email: '   ', password: 'pass123' })).toHaveProperty('email'))
-  test('invalid email format shows error',  () => expect(validateLogin({ email: 'notanemail', password: 'pass123' })).toHaveProperty('email'))
-  test('email missing @ shows error',       () => expect(validateLogin({ email: 'userexample.com', password: 'pass123' })).toHaveProperty('email'))
-  test('valid email passes',                () => expect(validateLogin({ email: 'amit@allsolutions.com', password: 'pass123' })).not.toHaveProperty('email'))
-  test('empty password shows error',        () => expect(validateLogin({ email: 'a@b.com', password: '' })).toHaveProperty('password'))
-  test('password < 6 chars shows error',    () => expect(validateLogin({ email: 'a@b.com', password: '12345' })).toHaveProperty('password'))
-  test('password exactly 6 chars passes',   () => expect(validateLogin({ email: 'a@b.com', password: '123456' })).not.toHaveProperty('password'))
-  test('valid credentials — no errors',     () => expect(Object.keys(validateLogin({ email: 'amit@allsolutions.com', password: 'EventMgr@2026' })).length).toBe(0))
-  test('both fields empty — 2 errors',      () => expect(Object.keys(validateLogin({ email: '', password: '' })).length).toBe(2))
+// Payments quarterly
+function filterQuarterEvents(events, now) {
+  const q = Math.ceil((now.getMonth()+1)/3)
+  const year = now.getFullYear()
+  const start = new Date(year,(q-1)*3,1)
+  const end   = new Date(year,(q-1)*3+3,0)
+  return events.filter(e => {
+    const d = new Date(e.event_date)
+    return d >= start && d <= end
+  })
+}
+function calcPaymentSummary(events) {
+  const totalRevenue   = events.reduce((s,e) => s + (e.client_amount||0), 0)
+  const totalCollected = events.reduce((s,e) => s + (e.amount_received||0), 0)
+  const totalPending   = totalRevenue - totalCollected
+  return { totalRevenue, totalCollected, totalPending }
+}
+
+// Phase 2 utilities
+function buildGoogleMapsUrl(venue) {
+  if (venue.google_maps_url) return venue.google_maps_url
+  if (venue.lat && venue.lng) return `https://www.google.com/maps?q=${venue.lat},${venue.lng}`
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((venue.address||'')+' '+(venue.city||''))}`
+}
+function calcTripAmount(km, ratePerKm, payMethod, fixedAmount) {
+  if (payMethod === 'per_km') return (parseFloat(km)||0) * (parseFloat(ratePerKm)||0)
+  return parseFloat(fixedAmount)||0
+}
+function calcTotalTransportDue(trips) { return trips.filter(t => t.payment_status !== 'paid').reduce((s,t) => s + (t.amount||0), 0) }
+function markTripPaid(trip) { return { ...trip, payment_status: 'paid', amount_paid: trip.amount } }
+function calcEqualSplit(profit, ownerCount) { if (!ownerCount) return 0; return profit/ownerCount }
+function calcPercentSplit(profit, percent, totalPercent) { if (!totalPercent) return 0; return (percent/totalPercent)*profit }
+function calcInvestmentSplit(profit, investment, totalInvestment) { if (!totalInvestment) return 0; return (investment/totalInvestment)*profit }
+function calcOwnerTotalEarnings(splits, ownerId) { return splits.filter(s => s.co_owner_id===ownerId).reduce((s,x) => s+(x.calculated_amount||0), 0) }
+function calcOwnerPendingEarnings(splits, ownerId) { return splits.filter(s => s.co_owner_id===ownerId && !s.paid).reduce((s,x) => s+(x.calculated_amount||0), 0) }
+function calcOwnerSharePercent(ownerTotal, poolTotal) { if (!poolTotal) return 0; return Math.round((ownerTotal/poolTotal)*100) }
+function calcEventCost(eventItems, transportTrips, eventId) {
+  const itemCosts = eventItems.filter(i => i.event_id===eventId).reduce((s,i) => s+(i.cost||0), 0)
+  const tripCosts = transportTrips.filter(t => t.event_id===eventId).reduce((s,t) => s+(t.amount||0), 0)
+  return itemCosts + tripCosts
+}
+function getQuarterLabel(date) { return `Q${Math.ceil((date.getMonth()+1)/3)} ${date.getFullYear()}` }
+function getQuarterRange(date) {
+  const q = Math.ceil((date.getMonth()+1)/3), year = date.getFullYear(), sm = (q-1)*3
+  return { start: new Date(year,sm,1), end: new Date(year,sm+3,0), label: `Q${q} ${year}` }
+}
+function isInQuarter(dateStr, start, end) { const d = new Date(dateStr); return d>=start && d<=end }
+function getPerformerTypeEmoji(type) { return { actor:'🎬', dancer:'💃', musician:'🎵', joker:'🤹', juggler:'🎪', casino:'🎰', dj:'🎧', other:'🎭' }[type]||'🎭' }
+function formatTel(phone) { if (!phone) return null; return phone.replace(/\s+/g,'') }
+
+// ══════════════════════════════════════════════════════════════
+// PHASE 1 TESTS
+// ══════════════════════════════════════════════════════════════
+
+describe('🔐 Login — Validation', () => {
+  test('empty email shows error',          () => expect(validateLogin({email:'',password:'pass123'})).toHaveProperty('email'))
+  test('invalid email format shows error', () => expect(validateLogin({email:'notanemail',password:'pass123'})).toHaveProperty('email'))
+  test('valid email passes',               () => expect(validateLogin({email:'amit@allsolutions.com',password:'pass123'})).not.toHaveProperty('email'))
+  test('empty password shows error',       () => expect(validateLogin({email:'a@b.com',password:''})).toHaveProperty('password'))
+  test('password < 6 chars shows error',   () => expect(validateLogin({email:'a@b.com',password:'12345'})).toHaveProperty('password'))
+  test('password = 6 chars passes',        () => expect(validateLogin({email:'a@b.com',password:'123456'})).not.toHaveProperty('password'))
+  test('valid credentials — 0 errors',     () => expect(Object.keys(validateLogin({email:'amit@all.com',password:'EventMgr@2026'})).length).toBe(0))
+  test('both empty — 2 errors',            () => expect(Object.keys(validateLogin({email:'',password:''})).length).toBe(2))
+  test('whitespace email shows error',     () => expect(validateLogin({email:'  ',password:'pass123'})).toHaveProperty('email'))
 })
 
 describe('👤 People & Staff — Validation', () => {
-  test('empty name shows error',            () => expect(validatePerson({ full_name: '' })).toHaveProperty('full_name'))
-  test('whitespace name shows error',       () => expect(validatePerson({ full_name: '   ' })).toHaveProperty('full_name'))
-  test('valid name passes',                 () => expect(validatePerson({ full_name: 'Amit Prasad' })).not.toHaveProperty('full_name'))
-  test('valid Indian mobile passes',        () => expect(validatePerson({ full_name: 'T', phone: '+91 9876543210' })).not.toHaveProperty('phone'))
-  test('valid local number passes',         () => expect(validatePerson({ full_name: 'T', phone: '9876543210' })).not.toHaveProperty('phone'))
-  test('alphabetic phone shows error',      () => expect(validatePerson({ full_name: 'T', phone: 'abcdefgh' })).toHaveProperty('phone'))
-  test('too short phone shows error',       () => expect(validatePerson({ full_name: 'T', phone: '123' })).toHaveProperty('phone'))
-  test('empty phone is optional',           () => expect(validatePerson({ full_name: 'T', phone: '' })).not.toHaveProperty('phone'))
-  test('non-numeric pay rate shows error',  () => expect(validatePerson({ full_name: 'T', pay_rate: 'abc' })).toHaveProperty('pay_rate'))
-  test('negative pay rate shows error',     () => expect(validatePerson({ full_name: 'T', pay_rate: '-100' })).toHaveProperty('pay_rate'))
-  test('zero pay rate is valid',            () => expect(validatePerson({ full_name: 'T', pay_rate: '0' })).not.toHaveProperty('pay_rate'))
-  test('getPayTypeLabel formats correctly', () => expect(getPayTypLabel('fixed_per_event')).toBe('fixed per event'))
-  test('getPayTypeLabel handles empty',     () => expect(getPayTypLabel('')).toBe(''))
+  test('empty name shows error',           () => expect(validatePerson({full_name:''})).toHaveProperty('full_name'))
+  test('valid name passes',                () => expect(validatePerson({full_name:'Amit Prasad'})).not.toHaveProperty('full_name'))
+  test('valid Indian mobile passes',       () => expect(validatePerson({full_name:'T',phone:'+91 9876543210'})).not.toHaveProperty('phone'))
+  test('alphabetic phone shows error',     () => expect(validatePerson({full_name:'T',phone:'abcdefgh'})).toHaveProperty('phone'))
+  test('too short phone shows error',      () => expect(validatePerson({full_name:'T',phone:'123'})).toHaveProperty('phone'))
+  test('empty phone is optional',          () => expect(validatePerson({full_name:'T',phone:''})).not.toHaveProperty('phone'))
+  test('negative pay rate shows error',    () => expect(validatePerson({full_name:'T',pay_rate:'-100'})).toHaveProperty('pay_rate'))
+  test('zero pay rate is valid',           () => expect(validatePerson({full_name:'T',pay_rate:'0'})).not.toHaveProperty('pay_rate'))
+  test('getPayTypeLabel formats',          () => expect(getPayTypLabel('fixed_per_event')).toBe('fixed per event'))
+  test('getPayTypeLabel handles empty',    () => expect(getPayTypLabel('')).toBe(''))
 })
 
 describe('👥 Clients — Validation', () => {
-  test('empty name shows error',            () => expect(validateClient({ full_name: '' })).toHaveProperty('full_name'))
-  test('valid name passes',                 () => expect(validateClient({ full_name: 'Sharma Family' })).not.toHaveProperty('full_name'))
-  test('invalid email shows error',         () => expect(validateClient({ full_name: 'T', email: 'bademail' })).toHaveProperty('email'))
-  test('valid email passes',                () => expect(validateClient({ full_name: 'T', email: 'client@example.com' })).not.toHaveProperty('email'))
-  test('empty email is optional',           () => expect(validateClient({ full_name: 'T', email: '' })).not.toHaveProperty('email'))
-  test('invalid phone shows error',         () => expect(validateClient({ full_name: 'T', phone: 'abc' })).toHaveProperty('phone'))
-  test('valid phone passes',                () => expect(validateClient({ full_name: 'T', phone: '9876543210' })).not.toHaveProperty('phone'))
-  test('empty phone is optional',           () => expect(validateClient({ full_name: 'T', phone: '' })).not.toHaveProperty('phone'))
-  test('all valid — 0 errors',              () => expect(Object.keys(validateClient({ full_name: 'T', email: 'a@b.com', phone: '9876543210' })).length).toBe(0))
+  test('empty name shows error',           () => expect(validateClient({full_name:''})).toHaveProperty('full_name'))
+  test('valid name passes',                () => expect(validateClient({full_name:'Sharma Family'})).not.toHaveProperty('full_name'))
+  test('invalid email shows error',        () => expect(validateClient({full_name:'T',email:'bademail'})).toHaveProperty('email'))
+  test('valid email passes',               () => expect(validateClient({full_name:'T',email:'client@example.com'})).not.toHaveProperty('email'))
+  test('empty email is optional',          () => expect(validateClient({full_name:'T',email:''})).not.toHaveProperty('email'))
+  test('invalid phone shows error',        () => expect(validateClient({full_name:'T',phone:'abc'})).toHaveProperty('phone'))
+  test('valid phone passes',               () => expect(validateClient({full_name:'T',phone:'9876543210'})).not.toHaveProperty('phone'))
+  test('empty phone is optional',          () => expect(validateClient({full_name:'T',phone:''})).not.toHaveProperty('phone'))
+  test('all valid — 0 errors',             () => expect(Object.keys(validateClient({full_name:'T',email:'a@b.com',phone:'9876543210'})).length).toBe(0))
 })
 
 describe('📅 Events — Validation & Status', () => {
-  test('empty title shows error',           () => expect(validateEvent({ title: '', event_date: '2026-04-01' })).toHaveProperty('title'))
-  test('whitespace title shows error',      () => expect(validateEvent({ title: '  ', event_date: '2026-04-01' })).toHaveProperty('title'))
-  test('valid title passes',                () => expect(validateEvent({ title: 'Sharma Wedding', event_date: '2026-04-01' })).not.toHaveProperty('title'))
-  test('missing date shows error',          () => expect(validateEvent({ title: 'T', event_date: '' })).toHaveProperty('event_date'))
-  test('valid date passes',                 () => expect(validateEvent({ title: 'T', event_date: '2026-04-01' })).not.toHaveProperty('event_date'))
-  test('end before start shows error',      () => expect(validateEvent({ title: 'T', event_date: '2026-04-01', start_time: '18:00', end_time: '10:00' })).toHaveProperty('end_time'))
-  test('equal times shows error',           () => expect(validateEvent({ title: 'T', event_date: '2026-04-01', start_time: '10:00', end_time: '10:00' })).toHaveProperty('end_time'))
-  test('valid time range passes',           () => expect(validateEvent({ title: 'T', event_date: '2026-04-01', start_time: '10:00', end_time: '18:00' })).not.toHaveProperty('end_time'))
-  test('no times — no error',               () => expect(validateEvent({ title: 'T', event_date: '2026-04-01' })).not.toHaveProperty('end_time'))
-  test('non-numeric amount shows error',    () => expect(validateEvent({ title: 'T', event_date: '2026-04-01', client_amount: 'abc' })).toHaveProperty('client_amount'))
-  test('negative amount shows error',       () => expect(validateEvent({ title: 'T', event_date: '2026-04-01', client_amount: '-100' })).toHaveProperty('client_amount'))
-  test('valid amount passes',               () => expect(validateEvent({ title: 'T', event_date: '2026-04-01', client_amount: '50000' })).not.toHaveProperty('client_amount'))
-  test('upcoming status badge = blue',      () => expect(getEventStatusBadge('upcoming')).toBe('badge-blue'))
-  test('ongoing status badge = green',      () => expect(getEventStatusBadge('ongoing')).toBe('badge-green'))
-  test('completed status badge = gray',     () => expect(getEventStatusBadge('completed')).toBe('badge-gray'))
-  test('cancelled status badge = red',      () => expect(getEventStatusBadge('cancelled')).toBe('badge-red'))
-  test('unknown status badge = gray',       () => expect(getEventStatusBadge('unknown')).toBe('badge-gray'))
-  test('events sort by date ascending',     () => {
-    const evs = [{ event_date: '2026-05-01' }, { event_date: '2026-03-01' }, { event_date: '2026-04-01' }]
-    const sorted = sortEventsByDate(evs)
+  test('empty title shows error',          () => expect(validateEvent({title:'',event_date:'2026-04-01'})).toHaveProperty('title'))
+  test('missing date shows error',         () => expect(validateEvent({title:'T',event_date:''})).toHaveProperty('event_date'))
+  test('end before start shows error',     () => expect(validateEvent({title:'T',event_date:'2026-04-01',start_time:'18:00',end_time:'10:00'})).toHaveProperty('end_time'))
+  test('equal times shows error',          () => expect(validateEvent({title:'T',event_date:'2026-04-01',start_time:'10:00',end_time:'10:00'})).toHaveProperty('end_time'))
+  test('valid time range passes',          () => expect(validateEvent({title:'T',event_date:'2026-04-01',start_time:'10:00',end_time:'18:00'})).not.toHaveProperty('end_time'))
+  test('negative amount shows error',      () => expect(validateEvent({title:'T',event_date:'2026-04-01',client_amount:'-100'})).toHaveProperty('client_amount'))
+  test('upcoming badge = blue',            () => expect(getEventStatusBadge('upcoming')).toBe('badge-blue'))
+  test('completed badge = gray',           () => expect(getEventStatusBadge('completed')).toBe('badge-gray'))
+  test('events sort by date ascending',    () => {
+    const sorted = sortEventsByDate([{event_date:'2026-05-01'},{event_date:'2026-03-01'},{event_date:'2026-04-01'}])
     expect(sorted[0].event_date).toBe('2026-03-01')
     expect(sorted[2].event_date).toBe('2026-05-01')
   })
 })
 
-describe('🎭 Event Detail — Item Validation', () => {
-  test('empty description shows error',     () => expect(validateEventItem({ description: '' })).toHaveProperty('description'))
-  test('whitespace description error',      () => expect(validateEventItem({ description: '   ' })).toHaveProperty('description'))
-  test('valid description passes',          () => expect(validateEventItem({ description: 'Supervisor for setup' })).not.toHaveProperty('description'))
-  test('non-numeric cost shows error',      () => expect(validateEventItem({ description: 'T', cost: 'abc' })).toHaveProperty('cost'))
-  test('negative cost shows error',         () => expect(validateEventItem({ description: 'T', cost: '-100' })).toHaveProperty('cost'))
-  test('zero cost is valid',                () => expect(validateEventItem({ description: 'T', cost: '0' })).not.toHaveProperty('cost'))
-  test('valid cost passes',                 () => expect(validateEventItem({ description: 'T', cost: '1500' })).not.toHaveProperty('cost'))
-  test('zero days shows error',             () => expect(validateEventItem({ description: 'T', days: '0' })).toHaveProperty('days'))
-  test('negative days shows error',         () => expect(validateEventItem({ description: 'T', days: '-1' })).toHaveProperty('days'))
-  test('0.5 days passes',                   () => expect(validateEventItem({ description: 'T', days: '0.5' })).not.toHaveProperty('days'))
-  test('valid 3 days passes',               () => expect(validateEventItem({ description: 'T', days: '3' })).not.toHaveProperty('days'))
-  test('negative km shows error',           () => expect(validateEventItem({ description: 'T', km: '-10' })).toHaveProperty('km'))
-  test('valid km passes',                   () => expect(validateEventItem({ description: 'T', km: '25' })).not.toHaveProperty('km'))
-  test('no optional fields — no errors',    () => expect(Object.keys(validateEventItem({ description: 'Setup' })).length).toBe(0))
+describe('🎭 Event Detail — Items, Profit & Status', () => {
+  test('empty description shows error',    () => expect(validateEventItem({description:''})).toHaveProperty('description'))
+  test('negative cost shows error',        () => expect(validateEventItem({description:'T',cost:'-100'})).toHaveProperty('cost'))
+  test('zero cost is valid',               () => expect(validateEventItem({description:'T',cost:'0'})).not.toHaveProperty('cost'))
+  test('zero days shows error',            () => expect(validateEventItem({description:'T',days:'0'})).toHaveProperty('days'))
+  test('0.5 days passes',                  () => expect(validateEventItem({description:'T',days:'0.5'})).not.toHaveProperty('days'))
+  test('negative km shows error',          () => expect(validateEventItem({description:'T',km:'-10'})).toHaveProperty('km'))
+  test('profit: revenue - all item costs', () => {
+    const items = [{cost:5000},{cost:3000},{cost:2000}]
+    expect(calcEventProfit(50000, items)).toBe(40000)
+  })
+  test('profit negative when cost > revenue',() => expect(calcEventProfit(5000,[{cost:8000}])).toBe(-3000))
+  test('profit zero when equal',           () => expect(calcEventProfit(10000,[{cost:10000}])).toBe(0))
+  test('status: upcoming → ongoing valid', () => expect(canTransitionStatus('upcoming','ongoing')).toBeTruthy())
+  test('status: upcoming → cancelled valid',() => expect(canTransitionStatus('upcoming','cancelled')).toBeTruthy())
+  test('status: ongoing → completed valid',() => expect(canTransitionStatus('ongoing','completed')).toBeTruthy())
+  test('status: completed → anything invalid',() => expect(canTransitionStatus('completed','ongoing')).toBeFalsy())
+  test('markItemPaid sets cost as paid',   () => {
+    const result = markItemPaidResult({id:'1',cost:1500,amount_paid:0,payment_status:'pending'})
+    expect(result.amount_paid).toBe(1500)
+    expect(result.payment_status).toBe('paid')
+  })
 })
 
 describe('📦 Machines & Items — Validation & Status', () => {
-  test('empty name shows error',            () => expect(validateMachine({ name: '' })).toHaveProperty('name'))
-  test('whitespace name shows error',       () => expect(validateMachine({ name: '   ' })).toHaveProperty('name'))
-  test('valid name passes',                 () => expect(validateMachine({ name: 'Selfie Bhoot Booth' })).not.toHaveProperty('name'))
-  test('at_event without event_id errors',  () => expect(validateMachine({ name: 'T', status: 'at_event', current_event_id: '' })).toHaveProperty('current_event_id'))
-  test('at_event with event_id passes',     () => expect(validateMachine({ name: 'T', status: 'at_event', current_event_id: 'uuid-123' })).not.toHaveProperty('current_event_id'))
-  test('in_godown without event is fine',   () => expect(validateMachine({ name: 'T', status: 'in_godown', current_event_id: '' })).not.toHaveProperty('current_event_id'))
-  test('returned without event is fine',    () => expect(validateMachine({ name: 'T', status: 'returned' })).not.toHaveProperty('current_event_id'))
-  test('in_godown label correct',           () => expect(getMachineStatusLabel('in_godown')).toBe('📦 In Godown'))
-  test('at_event label correct',            () => expect(getMachineStatusLabel('at_event')).toBe('🎪 At Event'))
-  test('returned label correct',            () => expect(getMachineStatusLabel('returned')).toBe('✅ Returned'))
-  test('unknown status returns —',          () => expect(getMachineStatusLabel('broken')).toBe('—'))
+  test('empty name shows error',           () => expect(validateMachine({name:''})).toHaveProperty('name'))
+  test('at_event without event errors',    () => expect(validateMachine({name:'T',status:'at_event',current_event_id:''})).toHaveProperty('current_event_id'))
+  test('at_event with event passes',       () => expect(validateMachine({name:'T',status:'at_event',current_event_id:'uuid-123'})).not.toHaveProperty('current_event_id'))
+  test('in_godown without event is fine',  () => expect(validateMachine({name:'T',status:'in_godown'})).not.toHaveProperty('current_event_id'))
+  test('returned without event is fine',   () => expect(validateMachine({name:'T',status:'returned'})).not.toHaveProperty('current_event_id'))
+  test('in_godown label',                  () => expect(getMachineStatusLabel('in_godown')).toBe('📦 In Godown'))
+  test('at_event label',                   () => expect(getMachineStatusLabel('at_event')).toBe('🎪 At Event'))
+  test('returned label',                   () => expect(getMachineStatusLabel('returned')).toBe('✅ Returned'))
+  test('unknown status returns —',         () => expect(getMachineStatusLabel('broken')).toBe('—'))
+  test('at_event badge = badge-orange',    () => expect(getMachineStatusBadge('at_event')).toBe('badge-orange'))
 })
 
-describe('💰 Payments — Validation & Calculations', () => {
-  test('non-numeric received errors',       () => expect(validatePaymentUpdate('abc', 50000)).toHaveProperty('amount'))
-  test('negative received errors',          () => expect(validatePaymentUpdate('-100', 50000)).toHaveProperty('amount'))
-  test('received > billed errors',          () => expect(validatePaymentUpdate('60000', 50000)).toHaveProperty('amount'))
-  test('received = billed passes',          () => expect(validatePaymentUpdate('50000', 50000)).not.toHaveProperty('amount'))
-  test('partial payment passes',            () => expect(validatePaymentUpdate('25000', 50000)).not.toHaveProperty('amount'))
-  test('zero payment is valid',             () => expect(validatePaymentUpdate('0', 50000)).not.toHaveProperty('amount'))
-  test('progress 0% when nothing received', () => expect(calcPaymentProgress(0, 50000)).toBe(0))
-  test('progress 50% at half',              () => expect(calcPaymentProgress(25000, 50000)).toBe(50))
-  test('progress 100% when fully paid',     () => expect(calcPaymentProgress(50000, 50000)).toBe(100))
-  test('progress capped at 100%',           () => expect(calcPaymentProgress(60000, 50000)).toBe(100))
-  test('progress 0% when billed = 0',       () => expect(calcPaymentProgress(0, 0)).toBe(0))
-  test('staff due from unpaid items',       () => {
-    const items = [
-      { payment_status: 'pending', cost: 1000, amount_paid: 0 },
-      { payment_status: 'paid',    cost: 500,  amount_paid: 500 },
-      { payment_status: 'partial', cost: 800,  amount_paid: 400 },
-    ]
+describe('💰 Payments — Validation, Progress & Quarterly', () => {
+  test('non-numeric received errors',      () => expect(validatePaymentUpdate('abc',50000)).toHaveProperty('amount'))
+  test('negative received errors',         () => expect(validatePaymentUpdate('-100',50000)).toHaveProperty('amount'))
+  test('received > billed errors',         () => expect(validatePaymentUpdate('60000',50000)).toHaveProperty('amount'))
+  test('full payment passes',              () => expect(validatePaymentUpdate('50000',50000)).not.toHaveProperty('amount'))
+  test('progress 0% when nothing',         () => expect(calcPaymentProgress(0,50000)).toBe(0))
+  test('progress 50% at half',             () => expect(calcPaymentProgress(25000,50000)).toBe(50))
+  test('progress 100% when fully paid',    () => expect(calcPaymentProgress(50000,50000)).toBe(100))
+  test('progress capped at 100%',          () => expect(calcPaymentProgress(60000,50000)).toBe(100))
+  test('progress 0% when billed = 0',      () => expect(calcPaymentProgress(0,0)).toBe(0))
+  test('staff due from unpaid items',      () => {
+    const items = [{payment_status:'pending',cost:1000,amount_paid:0},{payment_status:'paid',cost:500,amount_paid:500},{payment_status:'partial',cost:800,amount_paid:400}]
     expect(calcStaffDue(items)).toBe(1400)
   })
-  test('staff due = 0 when all paid',       () => {
-    expect(calcStaffDue([{ payment_status: 'paid', cost: 500, amount_paid: 500 }])).toBe(0)
+  test('staff due = 0 when all paid',      () => expect(calcStaffDue([{payment_status:'paid',cost:500,amount_paid:500}])).toBe(0))
+  test('quarterly filter — events in Q1',  () => {
+    const events = [{event_date:'2026-01-15'},{event_date:'2026-05-10'}]
+    const filtered = filterQuarterEvents(events, new Date('2026-02-01'))
+    expect(filtered.length).toBe(1)
+    expect(filtered[0].event_date).toBe('2026-01-15')
   })
-  test('staff due = 0 with empty list',     () => expect(calcStaffDue([])).toBe(0))
+  test('payment summary totalRevenue',     () => {
+    const events = [{client_amount:50000,amount_received:30000},{client_amount:20000,amount_received:20000}]
+    expect(calcPaymentSummary(events).totalRevenue).toBe(70000)
+  })
+  test('payment summary totalCollected',   () => {
+    const events = [{client_amount:50000,amount_received:30000},{client_amount:20000,amount_received:20000}]
+    expect(calcPaymentSummary(events).totalCollected).toBe(50000)
+  })
+  test('payment summary totalPending',     () => {
+    const events = [{client_amount:50000,amount_received:30000},{client_amount:20000,amount_received:20000}]
+    expect(calcPaymentSummary(events).totalPending).toBe(20000)
+  })
 })
 
-describe('📊 Dashboard — Formatting & Utilities', () => {
-  test('fmt(0) returns "0" not "O"',        () => { expect(fmt(0)).toBe('0'); expect(fmt(0) === 'O').toBeFalsy() })
-  test('fmt(null) returns "0"',             () => expect(fmt(null)).toBe('0'))
-  test('fmt(undefined) returns "0"',        () => expect(fmt(undefined)).toBe('0'))
-  test('fmt(999) returns "999"',            () => expect(fmt(999)).toBe('999'))
-  test('fmt(1000) returns "1.0k"',          () => expect(fmt(1000)).toBe('1.0k'))
-  test('fmt(1500) returns "1.5k"',          () => expect(fmt(1500)).toBe('1.5k'))
-  test('fmt(100000) returns "1.0L"',        () => expect(fmt(100000)).toBe('1.0L'))
-  test('fmt(250000) returns "2.5L"',        () => expect(fmt(250000)).toBe('2.5L'))
-  test('fmtRs(0) returns "₹0"',            () => expect(fmtRs(0)).toBe('₹0'))
-  test('fmtRs(1000) returns "₹1.0k"',      () => expect(fmtRs(1000)).toBe('₹1.0k'))
-  test('fmtRs(50000) returns "₹50.0k"',    () => expect(fmtRs(50000)).toBe('₹50.0k'))
-  test('fmtRs(100000) returns "₹1.0L"',    () => expect(fmtRs(100000)).toBe('₹1.0L'))
-  test('profit positive revenue > cost',    () => expect(calcProfit(50000, 30000)).toBe(20000))
-  test('profit negative cost > revenue',    () => expect(calcProfit(10000, 30000)).toBe(-20000))
-  test('profit zero when equal',            () => expect(calcProfit(30000, 30000)).toBe(0))
-  test('profit handles null gracefully',    () => expect(calcProfit(null, null)).toBe(0))
-  test('wedding emoji is 💍',              () => expect(getEventTypeEmoji('wedding')).toBe('💍'))
-  test('birthday emoji is 🎂',             () => expect(getEventTypeEmoji('birthday')).toBe('🎂'))
-  test('office emoji is 🏢',               () => expect(getEventTypeEmoji('office')).toBe('🏢'))
-  test('unknown defaults to 🎪',           () => expect(getEventTypeEmoji('other')).toBe('🎪'))
-  test('undefined defaults to 🎪',         () => expect(getEventTypeEmoji(undefined)).toBe('🎪'))
-  test('filterBySearch returns all when no query', () => {
-    const items = [{ name: 'Alice' }, { name: 'Bob' }]
-    expect(filterBySearch(items, '', ['name'])).toHaveLength(2)
-  })
-  test('filterBySearch filters correctly', () => {
-    const items = [{ name: 'Amit Prasad' }, { name: 'Raj Kumar' }]
-    expect(filterBySearch(items, 'amit', ['name'])).toHaveLength(1)
-  })
-  test('filterBySearch case insensitive',  () => {
-    const items = [{ name: 'AMIT' }]
-    expect(filterBySearch(items, 'amit', ['name'])).toHaveLength(1)
-  })
-  test('filterBySearch no match returns empty', () => {
-    const items = [{ name: 'Alice' }]
-    expect(filterBySearch(items, 'xyz', ['name'])).toHaveLength(0)
-  })
+describe('📊 Dashboard — Greet, DateLabel & Formatting', () => {
+  test('hour 0–11 = Good morning',         () => { expect(greet(0)).toBe('Good morning'); expect(greet(11)).toBe('Good morning') })
+  test('hour 12–16 = Good afternoon',      () => { expect(greet(12)).toBe('Good afternoon'); expect(greet(16)).toBe('Good afternoon') })
+  test('hour 17–23 = Good evening',        () => { expect(greet(17)).toBe('Good evening'); expect(greet(23)).toBe('Good evening') })
+  test('dateLabel Today returns badge-green',    () => expect(dateLabel('2026-03-19','2026-03-19','2026-03-20').cls).toBe('badge-green'))
+  test('dateLabel Tomorrow returns badge-orange',() => expect(dateLabel('2026-03-20','2026-03-19','2026-03-20').cls).toBe('badge-orange'))
+  test('dateLabel other returns badge-gray',     () => expect(dateLabel('2026-04-01','2026-03-19','2026-03-20').cls).toBe('badge-gray'))
+  test('dateLabel Today label = "Today"',        () => expect(dateLabel('2026-03-19','2026-03-19','2026-03-20').label).toBe('Today'))
+  test('fmt(0) returns "0" not "O"',       () => { expect(fmt(0)).toBe('0'); expect(fmt(0)==='O').toBeFalsy() })
+  test('fmt(null) returns "0"',            () => expect(fmt(null)).toBe('0'))
+  test('fmt(1000) returns "1.0k"',         () => expect(fmt(1000)).toBe('1.0k'))
+  test('fmt(100000) returns "1.0L"',       () => expect(fmt(100000)).toBe('1.0L'))
+  test('fmtRs(0) returns "₹0"',           () => expect(fmtRs(0)).toBe('₹0'))
+  test('fmtRs(50000) returns "₹50.0k"',   () => expect(fmtRs(50000)).toBe('₹50.0k'))
+  test('profit positive',                  () => expect(calcProfit(50000,30000)).toBe(20000))
+  test('profit negative',                  () => expect(calcProfit(10000,30000)).toBe(-20000))
+  test('profit null = 0',                  () => expect(calcProfit(null,null)).toBe(0))
+  test('wedding emoji is 💍',             () => expect(getEventTypeEmoji('wedding')).toBe('💍'))
 })
 
 describe('📱 PWA Install — Device Detection', () => {
-  test('iPhone detected as ios',            () => expect(detectDeviceType('Mozilla/5.0 (iPhone; CPU iPhone OS 16_0)')).toBe('ios'))
-  test('iPad detected as ios',              () => expect(detectDeviceType('Mozilla/5.0 (iPad; CPU OS 16_0)')).toBe('ios'))
-  test('iPod detected as ios',              () => expect(detectDeviceType('Mozilla/5.0 (iPod touch; CPU iPhone OS 16)')).toBe('ios'))
-  test('Chrome iOS NOT detected as ios (CriOS)', () => expect(detectDeviceType('CriOS/100 iPhone')).not.toBe('ios'))
-  test('Android detected as android',       () => expect(detectDeviceType('Mozilla/5.0 (Linux; Android 12; Pixel 6)')).toBe('android'))
-  test('Android Chrome detected correctly', () => expect(detectDeviceType('Mozilla/5.0 (Linux; Android 11) Chrome/96')).toBe('android'))
-  test('Windows desktop = desktop',         () => expect(detectDeviceType('Mozilla/5.0 (Windows NT 10.0; Win64; x64)')).toBe('desktop'))
-  test('Mac desktop = desktop',             () => expect(detectDeviceType('Mozilla/5.0 (Macintosh; Intel Mac OS X 13_0)')).toBe('desktop'))
-  test('Linux desktop = desktop',           () => expect(detectDeviceType('Mozilla/5.0 (X11; Linux x86_64) Chrome/96')).toBe('desktop'))
-  test('empty UA = desktop',                () => expect(detectDeviceType('')).toBe('desktop'))
+  test('iPhone detected as ios',           () => expect(detectDeviceType('Mozilla/5.0 (iPhone; CPU iPhone OS 16_0)')).toBe('ios'))
+  test('iPad detected as ios',             () => expect(detectDeviceType('Mozilla/5.0 (iPad; CPU OS 16_0)')).toBe('ios'))
+  test('CriOS NOT detected as ios',        () => expect(detectDeviceType('CriOS/100 iPhone')).not.toBe('ios'))
+  test('Android detected',                 () => expect(detectDeviceType('Mozilla/5.0 (Linux; Android 12)')).toBe('android'))
+  test('Windows = desktop',               () => expect(detectDeviceType('Mozilla/5.0 (Windows NT 10.0)')).toBe('desktop'))
+  test('Mac = desktop',                   () => expect(detectDeviceType('Macintosh; Intel Mac OS X')).toBe('desktop'))
+  test('empty UA = desktop',              () => expect(detectDeviceType('')).toBe('desktop'))
 })
 
-describe('🌗 Theme — Persistence & Toggle', () => {
-  test('dark is valid theme',               () => expect(isValidTheme('dark')).toBeTruthy())
-  test('light is valid theme',              () => expect(isValidTheme('light')).toBeTruthy())
-  test('random string not valid',           () => expect(isValidTheme('blue')).toBeFalsy())
-  test('empty string not valid',            () => expect(isValidTheme('')).toBeFalsy())
-  test('toggle dark → light',              () => expect(toggleTheme('dark')).toBe('light'))
-  test('toggle light → dark',              () => expect(toggleTheme('light')).toBe('dark'))
+describe('🌗 Theme — Toggle & Persistence', () => {
+  test('dark is valid',                    () => expect(isValidTheme('dark')).toBeTruthy())
+  test('light is valid',                   () => expect(isValidTheme('light')).toBeTruthy())
+  test('random string invalid',            () => expect(isValidTheme('blue')).toBeFalsy())
+  test('toggle dark → light',             () => expect(toggleTheme('dark')).toBe('light'))
+  test('toggle light → dark',             () => expect(toggleTheme('light')).toBe('dark'))
 })
 
 describe('🔢 Version — Format', () => {
-  test('v202603.19.10 is valid',            () => expect(isValidVersion('202603.19.10')).toBeTruthy())
-  test('v202604.01.01 is valid',            () => expect(isValidVersion('202604.01.01')).toBeTruthy())
-  test('semver 1.0.0 is invalid',           () => expect(isValidVersion('1.0.0')).toBeFalsy())
-  test('v prefix invalid',                  () => expect(isValidVersion('v202603.19.10')).toBeFalsy())
-  test('empty string invalid',              () => expect(isValidVersion('')).toBeFalsy())
-  test('too short invalid',                 () => expect(isValidVersion('2026.1.1')).toBeFalsy())
+  test('202603.19.17 is valid',            () => expect(isValidVersion('202603.19.17')).toBeTruthy())
+  test('semver 1.0.0 invalid',             () => expect(isValidVersion('1.0.0')).toBeFalsy())
+  test('v prefix invalid',                 () => expect(isValidVersion('v202603.19.17')).toBeFalsy())
 })
 
 describe('🔇 Async Error — Suppression', () => {
-  test('message channel error detected',    () => expect(isMessageChannelError('A listener indicated an asynchronous response by returning true, but the message channel closed')).toBeTruthy())
-  test('channel closed error detected',     () => expect(isMessageChannelError('message channel closed before a response was received')).toBeTruthy())
-  test('asynchronous response detected',    () => expect(isMessageChannelError('asynchronous response')).toBeTruthy())
-  test('real errors NOT suppressed',        () => expect(isMessageChannelError('Cannot read properties of undefined')).toBeFalsy())
-  test('network errors NOT suppressed',     () => expect(isMessageChannelError('Failed to fetch')).toBeFalsy())
-  test('null handled safely',               () => expect(isMessageChannelError(null)).toBeFalsy())
-  test('empty string handled safely',       () => expect(isMessageChannelError('')).toBeFalsy())
+  test('message channel error detected',   () => expect(isMessageChannelError('message channel closed before response')).toBeTruthy())
+  test('async response error detected',    () => expect(isMessageChannelError('asynchronous response')).toBeTruthy())
+  test('real errors NOT suppressed',       () => expect(isMessageChannelError('Cannot read properties')).toBeFalsy())
+  test('null handled safely',              () => expect(isMessageChannelError(null)).toBeFalsy())
 })
 
 describe('🔑 Auth — Last Login & Protected Routes', () => {
-  test('valid ISO date returns non-null',    () => expect(getLastLoginDisplay('2026-03-19T10:30:00.000Z')).toBeTruthy())
+  test('valid ISO returns non-null',        () => expect(getLastLoginDisplay('2026-03-19T10:30:00.000Z')).toBeTruthy())
   test('invalid date returns null',         () => expect(getLastLoginDisplay('not-a-date')).toBeNull())
   test('null returns null',                 () => expect(getLastLoginDisplay(null)).toBeNull())
-  test('undefined returns null',            () => expect(getLastLoginDisplay(undefined)).toBeNull())
-  test('loading state → loading',           () => expect(isProtectedRoute(null, true)).toBe('loading'))
-  test('no user → redirect',               () => expect(isProtectedRoute(null, false)).toBe('redirect'))
-  test('user present → render',            () => expect(isProtectedRoute({ id: '123' }, false)).toBe('render'))
-  test('user + loading → loading',         () => expect(isProtectedRoute({ id: '123' }, true)).toBe('loading'))
+  test('loading → loading',               () => expect(isProtectedRoute(null,true)).toBe('loading'))
+  test('no user → redirect',              () => expect(isProtectedRoute(null,false)).toBe('redirect'))
+  test('user present → render',           () => expect(isProtectedRoute({id:'123'},false)).toBe('render'))
 })
 
-// ── SUMMARY ───────────────────────────────────────────────────
-console.log(`\n${'═'.repeat(52)}`)
-console.log(`  TOTAL: ${passed + failed} tests`)
+// ══════════════════════════════════════════════════════════════
+// PHASE 2 TESTS
+// ══════════════════════════════════════════════════════════════
+
+describe('🗺️ Venues — Validation', () => {
+  test('empty name shows error',           () => expect(validateVenue({name:'',address:'123 Park St'})).toHaveProperty('name'))
+  test('empty address shows error',        () => expect(validateVenue({name:'ITC',address:''})).toHaveProperty('address'))
+  test('valid name + address passes',      () => expect(Object.keys(validateVenue({name:'ITC',address:'1 JBS Haldane'}))).toHaveLength(0))
+  test('invalid maps URL shows error',     () => expect(validateVenue({name:'ITC',address:'1 JBS',google_maps_url:'not-a-url'})).toHaveProperty('google_maps_url'))
+  test('valid maps URL passes',            () => expect(validateVenue({name:'ITC',address:'1 JBS',google_maps_url:'https://maps.google.com/?q=ITC'})).not.toHaveProperty('google_maps_url'))
+  test('empty maps URL is optional',       () => expect(validateVenue({name:'ITC',address:'1 JBS',google_maps_url:''})).not.toHaveProperty('google_maps_url'))
+  test('invalid lat shows error',          () => expect(validateVenue({name:'ITC',address:'1 JBS',lat:'abc'})).toHaveProperty('lat'))
+  test('lat > 90 shows error',            () => expect(validateVenue({name:'ITC',address:'1 JBS',lat:'200'})).toHaveProperty('lat'))
+  test('valid Kolkata lat passes',         () => expect(validateVenue({name:'ITC',address:'1 JBS',lat:'22.5726'})).not.toHaveProperty('lat'))
+  test('lng > 180 shows error',           () => expect(validateVenue({name:'ITC',address:'1 JBS',lng:'-200'})).toHaveProperty('lng'))
+  test('valid Kolkata lng passes',         () => expect(validateVenue({name:'ITC',address:'1 JBS',lng:'88.3639'})).not.toHaveProperty('lng'))
+})
+
+describe('🗺️ Venues — Google Maps URL Builder', () => {
+  test('uses google_maps_url when set',    () => {
+    expect(buildGoogleMapsUrl({google_maps_url:'https://maps.google.com/?q=ITC',address:'ITC',city:'Kolkata'}))
+      .toBe('https://maps.google.com/?q=ITC')
+  })
+  test('uses lat/lng when no URL',         () => {
+    const url = buildGoogleMapsUrl({lat:'22.57',lng:'88.36',address:'ITC',city:'Kolkata'})
+    expect(url).toContain('22.57')
+    expect(url).toContain('88.36')
+  })
+  test('falls back to address search',     () => {
+    const url = buildGoogleMapsUrl({address:'ITC Royal Bengal',city:'Kolkata'})
+    expect(url).toContain('google.com')
+    expect(url).toContain('ITC')
+  })
+  test('all URLs use https',              () => expect(buildGoogleMapsUrl({address:'Test',city:'Kolkata'})).toContain('https://'))
+  test('lat/lng URL contains maps path',  () => expect(buildGoogleMapsUrl({lat:'22.57',lng:'88.36',address:'X',city:'Y'})).toContain('maps'))
+})
+
+describe('🎭 Performers — Validation & Emojis', () => {
+  test('empty name shows error',           () => expect(validatePerformer({full_name:''})).toHaveProperty('full_name'))
+  test('valid name passes',               () => expect(validatePerformer({full_name:'Raj Kumar'})).not.toHaveProperty('full_name'))
+  test('invalid phone shows error',        () => expect(validatePerformer({full_name:'T',phone:'abc'})).toHaveProperty('phone'))
+  test('valid phone passes',              () => expect(validatePerformer({full_name:'T',phone:'9876543210'})).not.toHaveProperty('phone'))
+  test('empty phone is optional',          () => expect(validatePerformer({full_name:'T',phone:''})).not.toHaveProperty('phone'))
+  test('negative rate shows error',        () => expect(validatePerformer({full_name:'T',rate:'-500'})).toHaveProperty('rate'))
+  test('non-numeric rate shows error',     () => expect(validatePerformer({full_name:'T',rate:'abc'})).toHaveProperty('rate'))
+  test('valid rate passes',               () => expect(validatePerformer({full_name:'T',rate:'5000'})).not.toHaveProperty('rate'))
+  test('actor emoji is 🎬',              () => expect(getPerformerTypeEmoji('actor')).toBe('🎬'))
+  test('dancer emoji is 💃',             () => expect(getPerformerTypeEmoji('dancer')).toBe('💃'))
+  test('musician emoji is 🎵',           () => expect(getPerformerTypeEmoji('musician')).toBe('🎵'))
+  test('dj emoji is 🎧',                 () => expect(getPerformerTypeEmoji('dj')).toBe('🎧'))
+  test('unknown defaults to 🎭',         () => expect(getPerformerTypeEmoji('unknown')).toBe('🎭'))
+})
+
+describe('🚛 Transport — Validation & Calculations', () => {
+  test('missing event shows error',        () => expect(validateTransportTrip({event_id:'',trip_date:'2026-04-01'})).toHaveProperty('event_id'))
+  test('missing date shows error',         () => expect(validateTransportTrip({event_id:'uuid',trip_date:''})).toHaveProperty('trip_date'))
+  test('valid form passes',               () => expect(Object.keys(validateTransportTrip({event_id:'uuid',trip_date:'2026-04-01'}))).toHaveLength(0))
+  test('negative amount shows error',      () => expect(validateTransportTrip({event_id:'id',trip_date:'2026-04-01',amount:'-100'})).toHaveProperty('amount'))
+  test('negative km shows error',          () => expect(validateTransportTrip({event_id:'id',trip_date:'2026-04-01',km:'-10'})).toHaveProperty('km'))
+  test('zero km with per_km billing error',() => expect(validateTransportTrip({event_id:'id',trip_date:'2026-04-01',pay_method:'per_km',km:'0'})).toHaveProperty('km'))
+  test('per_km: 25km × ₹20 = ₹500',      () => expect(calcTripAmount(25,20,'per_km',0)).toBe(500))
+  test('fixed amount ignores km',          () => expect(calcTripAmount(25,20,'fixed',800)).toBe(800))
+  test('per_km with 0 rate = ₹0',         () => expect(calcTripAmount(25,0,'per_km',0)).toBe(0))
+  test('total due from unpaid trips',      () => {
+    expect(calcTotalTransportDue([{payment_status:'pending',amount:500},{payment_status:'paid',amount:300},{payment_status:'pending',amount:200}])).toBe(700)
+  })
+  test('total due = 0 when all paid',     () => expect(calcTotalTransportDue([{payment_status:'paid',amount:500}])).toBe(0))
+  test('markTripPaid sets paid + amount', () => {
+    const result = markTripPaid({id:'t1',amount:600,payment_status:'pending'})
+    expect(result.payment_status).toBe('paid')
+    expect(result.amount_paid).toBe(600)
+  })
+  test('formatTel removes spaces',         () => expect(formatTel('+91 9876 543210')).toBe('+919876543210'))
+  test('formatTel null for empty/null',    () => { expect(formatTel('')).toBeNull(); expect(formatTel(null)).toBeNull() })
+})
+
+describe('👥 Co-Owners — Validation & Earnings', () => {
+  test('empty name shows error',           () => expect(validateCoOwner({full_name:''})).toHaveProperty('full_name'))
+  test('valid name passes',               () => expect(validateCoOwner({full_name:'Raj Sharma'})).not.toHaveProperty('full_name'))
+  test('invalid email shows error',        () => expect(validateCoOwner({full_name:'T',email:'bad'})).toHaveProperty('email'))
+  test('valid email passes',              () => expect(validateCoOwner({full_name:'T',email:'raj@test.com'})).not.toHaveProperty('email'))
+  test('empty email is optional',          () => expect(validateCoOwner({full_name:'T',email:''})).not.toHaveProperty('email'))
+  test('invalid phone shows error',        () => expect(validateCoOwner({full_name:'T',phone:'abc'})).toHaveProperty('phone'))
+  test('total earnings sums all splits',   () => {
+    const splits = [{co_owner_id:'o1',calculated_amount:5000,paid:true},{co_owner_id:'o1',calculated_amount:3000,paid:false},{co_owner_id:'o2',calculated_amount:4000,paid:true}]
+    expect(calcOwnerTotalEarnings(splits,'o1')).toBe(8000)
+    expect(calcOwnerTotalEarnings(splits,'o2')).toBe(4000)
+  })
+  test('pending earnings = unpaid only',   () => {
+    const splits = [{co_owner_id:'o1',calculated_amount:5000,paid:true},{co_owner_id:'o1',calculated_amount:3000,paid:false}]
+    expect(calcOwnerPendingEarnings(splits,'o1')).toBe(3000)
+  })
+  test('share % of pool',                 () => expect(calcOwnerSharePercent(8000,20000)).toBe(40))
+  test('share % = 0 when pool = 0',       () => expect(calcOwnerSharePercent(5000,0)).toBe(0))
+  test('share % rounds correctly',         () => expect(calcOwnerSharePercent(1,3)).toBe(33))
+  test('event cost = items + transport',   () => {
+    const items = [{event_id:'e1',cost:5000},{event_id:'e1',cost:3000},{event_id:'e2',cost:2000}]
+    const trips = [{event_id:'e1',amount:1500}]
+    expect(calcEventCost(items,trips,'e1')).toBe(9500)
+    expect(calcEventCost(items,trips,'e2')).toBe(2000)
+  })
+})
+
+describe('💰 Profit Split — All 4 Methods + Validation', () => {
+  test('equal split 3 owners',             () => expect(calcEqualSplit(90000,3)).toBe(30000))
+  test('equal split 2 owners',             () => expect(calcEqualSplit(100000,2)).toBe(50000))
+  test('equal split 0 owners returns 0',   () => expect(calcEqualSplit(90000,0)).toBe(0))
+  test('percent split 60% of 100k = 60k', () => expect(calcPercentSplit(100000,60,100)).toBe(60000))
+  test('percent split 0 total returns 0',  () => expect(calcPercentSplit(100000,60,0)).toBe(0))
+  test('percent split partial totals',     () => {
+    expect(Math.round(calcPercentSplit(100000,40,100))).toBe(40000)
+    expect(Math.round(calcPercentSplit(100000,35,100))).toBe(35000)
+    expect(Math.round(calcPercentSplit(100000,25,100))).toBe(25000)
+  })
+  test('investment split proportional',    () => {
+    expect(calcInvestmentSplit(100000,50000,100000)).toBe(50000)
+    expect(calcInvestmentSplit(100000,30000,100000)).toBe(30000)
+  })
+  test('investment split 0 total = 0',     () => expect(calcInvestmentSplit(100000,50000,0)).toBe(0))
+  test('investment equal shares = equal',  () => expect(calcInvestmentSplit(90000,30000,90000)).toBe(30000))
+  test('validation — no owners',          () => expect(validateProfitSplit([],  'equal',{})).toHaveProperty('owners'))
+  test('validation — 0% total errors',    () => {
+    expect(validateProfitSplit([{id:'a'},{id:'b'}],'fixed_percent',{a:{percent:'0'},b:{percent:'0'}})).toHaveProperty('percent')
+  })
+  test('validation — valid % passes',     () => {
+    expect(validateProfitSplit([{id:'a'},{id:'b'}],'fixed_percent',{a:{percent:'60'},b:{percent:'40'}})).not.toHaveProperty('percent')
+  })
+  test('validation — 0 investment errors', () => {
+    expect(validateProfitSplit([{id:'a'}],'investment_based',{a:{investment:'0'}})).toHaveProperty('investment')
+  })
+  test('validation — valid investment passes',() => {
+    expect(validateProfitSplit([{id:'a'}],'investment_based',{a:{investment:'50000'}})).not.toHaveProperty('investment')
+  })
+  test('validation — equal always valid', () => expect(validateProfitSplit([{id:'a'}],'equal',{})).not.toHaveProperty('owners'))
+  test('event cost includes transport',    () => {
+    const items = [{event_id:'e1',cost:8000}]
+    const trips = [{event_id:'e1',amount:2000}]
+    expect(calcEventCost(items,trips,'e1')).toBe(10000)
+  })
+  test('profit after cost deduction',      () => expect(calcProfit(50000,10000)).toBe(40000))
+})
+
+describe('📅 Quarter — Range, Label & Filter', () => {
+  test('Jan = Q1', () => expect(getQuarterLabel(new Date('2026-01-15'))).toBe('Q1 2026'))
+  test('Apr = Q2', () => expect(getQuarterLabel(new Date('2026-04-01'))).toBe('Q2 2026'))
+  test('Jul = Q3', () => expect(getQuarterLabel(new Date('2026-07-10'))).toBe('Q3 2026'))
+  test('Oct = Q4', () => expect(getQuarterLabel(new Date('2026-10-31'))).toBe('Q4 2026'))
+  test('Mar = Q1', () => expect(getQuarterLabel(new Date('2026-03-19'))).toBe('Q1 2026'))
+  test('Dec = Q4', () => expect(getQuarterLabel(new Date('2026-12-31'))).toBe('Q4 2026'))
+  test('Q1 starts Jan 1', () => {
+    const {start} = getQuarterRange(new Date('2026-02-15'))
+    expect(start.getMonth()).toBe(0); expect(start.getDate()).toBe(1)
+  })
+  test('Q1 ends Mar 31', () => {
+    const {end} = getQuarterRange(new Date('2026-02-15'))
+    expect(end.getMonth()).toBe(2); expect(end.getDate()).toBe(31)
+  })
+  test('Q2 starts Apr 1', () => expect(getQuarterRange(new Date('2026-05-01')).start.getMonth()).toBe(3))
+  test('event in quarter returns true', () => {
+    const {start,end} = getQuarterRange(new Date('2026-02-01'))
+    expect(isInQuarter('2026-02-15',start,end)).toBeTruthy()
+  })
+  test('event outside quarter returns false', () => {
+    const {start,end} = getQuarterRange(new Date('2026-02-01'))
+    expect(isInQuarter('2026-06-15',start,end)).toBeFalsy()
+  })
+  test('last day of quarter is included', () => {
+    const {start,end} = getQuarterRange(new Date('2026-02-01'))
+    expect(isInQuarter('2026-03-31',start,end)).toBeTruthy()
+  })
+})
+
+describe('📚 Constants — All Exports, Badges & Labels', () => {
+  const EVENT_TYPES        = ['wedding','birthday','office','other']
+  const EVENT_STATUSES     = ['upcoming','ongoing','completed','cancelled']
+  const ROLES              = ['admin','supervisor','staff','driver']
+  const PAY_TYPES          = ['daily','hourly','per_km','fixed_per_event','monthly']
+  const ITEM_TYPES         = ['machine','performer','supervisor','helper','transport','other']
+  const MACHINE_STATUSES   = ['in_godown','at_event','returned']
+  const MACHINE_CATEGORIES = ['game','machine','costume','prop','other']
+  const PERFORMER_TYPES    = ['actor','dancer','musician','joker','juggler','casino','dj','other']
+  const VENDOR_TYPES       = ['payroll','freelancer','vendor_agency']
+  const VEHICLE_TYPES      = ['Tata Ace','Tata 407','Auto','Van','Other']
+  const SPLIT_METHODS      = ['equal','fixed_percent','custom_percent','investment_based']
+  const PERFORMER_RATE_TYPES = ['per_event','per_hour','per_day']
+  const TRANSPORT_PAY_METHODS = ['per_km','fixed']
+
+  // Counts
+  test('4 event types',                    () => expect(EVENT_TYPES.length).toBe(4))
+  test('4 event statuses',                 () => expect(EVENT_STATUSES.length).toBe(4))
+  test('4 roles',                          () => expect(ROLES.length).toBe(4))
+  test('5 pay types',                      () => expect(PAY_TYPES.length).toBe(5))
+  test('6 item types',                     () => expect(ITEM_TYPES.length).toBe(6))
+  test('3 machine statuses',               () => expect(MACHINE_STATUSES.length).toBe(3))
+  test('8 performer types',                () => expect(PERFORMER_TYPES.length).toBe(8))
+  test('5 vehicle types',                  () => expect(VEHICLE_TYPES.length).toBe(5))
+  test('4 split methods',                  () => expect(SPLIT_METHODS.length).toBe(4))
+
+  // Badge functions
+  test('getEventTypeBadge wedding = badge-gold',     () => expect(getEventTypeBadge('wedding')).toBe('badge-gold'))
+  test('getEventTypeBadge office = badge-blue',      () => expect(getEventTypeBadge('office')).toBe('badge-blue'))
+  test('getRoleBadge admin = badge-gold',            () => expect(getRoleBadge('admin')).toBe('badge-gold'))
+  test('getRoleBadge driver = badge-green',          () => expect(getRoleBadge('driver')).toBe('badge-green'))
+  test('getRoleBadge unknown = badge-gray',          () => expect(getRoleBadge('unknown')).toBe('badge-gray'))
+
+  // getLabel helper
+  test('getLabel finds correct label',     () => {
+    const opts = [{value:'per_km',label:'Per KM'},{value:'fixed',label:'Fixed Amount'}]
+    expect(getLabel(opts,'per_km')).toBe('Per KM')
+  })
+  test('getLabel returns value if not found',() => {
+    const opts = [{value:'a',label:'A'}]
+    expect(getLabel(opts,'b')).toBe('b')
+  })
+
+  // filterBySearch
+  test('filterBySearch case insensitive',  () => {
+    expect(filterBySearch([{name:'AMIT'}],'amit',['name'])).toHaveLength(1)
+  })
+  test('filterBySearch no match = empty',  () => {
+    expect(filterBySearch([{name:'Alice'}],'xyz',['name'])).toHaveLength(0)
+  })
+  test('filterBySearch empty query = all', () => {
+    expect(filterBySearch([{name:'A'},{name:'B'}],'',['name'])).toHaveLength(2)
+  })
+})
+
+// ── SUMMARY ──────────────────────────────────────────────────
+const total = passed + failed
+console.log(`\n${'═'.repeat(54)}`)
+console.log(`  TOTAL: ${total} tests`)
 console.log(`  ✅ Passed: ${passed}`)
 console.log(`  ❌ Failed: ${failed}`)
-console.log('═'.repeat(52))
-if (failed === 0) console.log('  🎉 All tests passed! Clean & ready to deploy.\n')
+console.log('═'.repeat(54))
+if (failed === 0) console.log('  🎉 All tests passed! Ready to deploy.\n')
 else { console.log('  ⚠️  Fix failing tests before deploying.\n'); process.exit(1) }

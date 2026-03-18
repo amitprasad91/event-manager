@@ -4,31 +4,19 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { APP_VERSION, BUILD_DATE } from '../version.js'
 import { CalendarDays, MapPin, Phone, ArrowRight } from 'lucide-react'
+import { getEventTypeEmoji, fmtRs, fmt, COLORS } from '../lib/constants'
 import { format, isToday, isTomorrow } from 'date-fns'
 
-// Format number — always use digits, never letters
-function fmt(n) {
-  if (n === 0 || n === undefined || n === null) return '0'
-  if (n >= 100000) return `${(n/100000).toFixed(1)}L`
-  if (n >= 1000) return `${(n/1000).toFixed(1)}k`
-  return `${n}`
-}
-function fmtRs(n) {
-  if (n === 0 || n === undefined || n === null) return '₹0'
-  if (n >= 100000) return `₹${(n/100000).toFixed(1)}L`
-  if (n >= 1000) return `₹${(n/1000).toFixed(1)}k`
-  return `₹${n}`
-}
-
+// fmt and fmtRs imported from lib/constants
 // Stat card — horizontal layout, big number right
 function StatCard({ label, value, sub, color, icon, prefix = '' }) {
-  const colors = {
-    gold:  { accent: '#f0b429', glow: 'rgba(240,180,41,0.15)',  bar: 'linear-gradient(90deg,#f0b429,#ff8c42)' },
-    green: { accent: '#10d4a0', glow: 'rgba(16,212,160,0.12)',  bar: 'linear-gradient(90deg,#10d4a0,#00e5cc)' },
-    red:   { accent: '#ff5c7a', glow: 'rgba(255,92,122,0.12)',  bar: 'linear-gradient(90deg,#ff5c7a,#ff8c42)' },
-    blue:  { accent: '#6c63ff', glow: 'rgba(108,99,255,0.12)',  bar: 'linear-gradient(90deg,#6c63ff,#3b9eff)' },
+  const colorMap = {
+    gold:  { accent: COLORS.gold.hex,  glow: COLORS.gold.glow,  bar: `linear-gradient(90deg,${COLORS.gold.hex},${COLORS.orange.hex})` },
+    green: { accent: COLORS.green.hex, glow: COLORS.green.glow, bar: `linear-gradient(90deg,${COLORS.green.hex},${COLORS.teal.hex})` },
+    red:   { accent: COLORS.red.hex,   glow: COLORS.red.glow,   bar: `linear-gradient(90deg,${COLORS.red.hex},${COLORS.orange.hex})` },
+    blue:  { accent: COLORS.blue.hex,  glow: COLORS.blue.glow,  bar: `linear-gradient(90deg,${COLORS.blue.hex},#3b9eff)` },
   }
-  const c = colors[color]
+  const c = colorMap[color]
   return (
     <div style={{
       background: 'var(--bg-2)',
@@ -72,7 +60,7 @@ function StatCard({ label, value, sub, color, icon, prefix = '' }) {
           <div style={{ fontSize: '0.72rem', color: 'var(--text-3)', marginTop: 8 }}>{sub}</div>
         </div>
         {/* Large faded icon */}
-        <div style={{ fontSize: '2.2rem', opacity: 0.15, lineHeight: 1, flexShrink: 0 }}>{icon}</div>
+        <div style={{ fontSize: '2.2rem', opacity: 0.15, lineHeight: 1.2, flexShrink: 0 }}>{icon}</div>
       </div>
     </div>
   )
@@ -137,7 +125,8 @@ export default function DashboardPage() {
               letterSpacing: '0.01em',
               marginBottom: 4,
               color: 'var(--text)',
-              lineHeight: 1.1,
+              lineHeight: 1.3,
+              paddingBottom: '0.1em',
             }}>
               {greet()}, {profile?.full_name?.split(' ')[0] || 'Boss'} 👋
             </h1>
@@ -156,8 +145,8 @@ export default function DashboardPage() {
             fontSize: '0.7rem', color: 'var(--text-3)',
             whiteSpace: 'nowrap',
           }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10d4a0', boxShadow: '0 0 6px #10d4a0', display: 'inline-block' }} />
-            <span style={{ color: '#10d4a0', fontWeight: 600 }}>LIVE</span>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: COLORS.green.hex, boxShadow: `0 0 6px ${COLORS.green.hex}`, display: 'inline-block' }} />
+            <span style={{ color: COLORS.green.hex, fontWeight: 600 }}>LIVE</span>
             · v{APP_VERSION}
           </div>
         </div>
@@ -227,7 +216,7 @@ export default function DashboardPage() {
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: '1rem',
                   }}>
-                    {ev.event_type === 'wedding' ? '💍' : ev.event_type === 'birthday' ? '🎂' : ev.event_type === 'office' ? '🏢' : '🎪'}
+                    {getEventTypeEmoji(ev.event_type)}
                   </div>
 
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -253,7 +242,7 @@ export default function DashboardPage() {
                     <span className={`badge ${dl.cls}`}>{dl.label}</span>
                     {ev.client_amount > 0 && (
                       <span style={{
-                        fontSize: '0.78rem', fontWeight: 700, color: '#f0b429',
+                        fontSize: '0.78rem', fontWeight: 700, color: COLORS.gold.hex,
                         fontFamily: '"DM Mono", monospace',
                       }}>
                         ₹{ev.client_amount.toLocaleString('en-IN')}
