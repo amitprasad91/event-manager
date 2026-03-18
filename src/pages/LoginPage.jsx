@@ -17,7 +17,7 @@ export default function LoginPage() {
     if (!email.trim()) e.email = 'Email is required'
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = 'Enter a valid email'
     if (!password) e.password = 'Password is required'
-    else if (password.length < 6) e.password = 'Password must be at least 6 characters'
+    else if (password.length < 6) e.password = 'Minimum 6 characters'
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -29,7 +29,7 @@ export default function LoginPage() {
     const { error } = await signIn(email, password)
     setLoading(false)
     if (error) {
-      toast.error(error.message || 'Invalid login credentials')
+      toast.error(error.message || 'Invalid credentials')
       setErrors({ form: error.message })
     } else {
       navigate('/dashboard')
@@ -37,20 +37,34 @@ export default function LoginPage() {
   }
 
   const features = [
-    { icon: <CalendarDays size={14} />, text: 'Manage events & bookings' },
-    { icon: <Users size={14} />, text: 'Track staff & supervisors' },
-    { icon: <CreditCard size={14} />, text: 'Payment collection tracker' },
-    { icon: <Package size={14} />, text: 'Machine & godown status' },
+    { icon: <CalendarDays size={13} />, text: 'Manage events & bookings' },
+    { icon: <Users size={13} />, text: 'Track staff & supervisors' },
+    { icon: <CreditCard size={13} />, text: 'Payment collection tracker' },
+    { icon: <Package size={13} />, text: 'Machine & godown status' },
   ]
 
   return (
     <div className="login-page">
       <div className="login-left">
         <div className="login-card">
+
+          {/* Brand — All Solutions / Kolkata */}
           <div className="login-brand">
-            <div className="mark">⚡ EventMgr</div>
-            <div className="tagline">Event Business Manager</div>
+            <div style={{
+              fontFamily: 'Syne', fontWeight: 800, fontSize: '2rem',
+              color: 'var(--gold)', letterSpacing: '-0.04em', lineHeight: 1,
+            }}>
+              All Solutions
+            </div>
+            <div style={{
+              fontSize: '0.72rem', color: 'var(--text-3)',
+              letterSpacing: '0.12em', marginTop: 5,
+              textTransform: 'uppercase',
+            }}>
+              Kolkata
+            </div>
           </div>
+
           <div className="login-welcome">
             <h1>Welcome back</h1>
             <p>Sign in to manage your events business</p>
@@ -60,54 +74,56 @@ export default function LoginPage() {
             <div className="form-group">
               <label className="form-label">Email Address</label>
               <div style={{ position: 'relative' }}>
-                <Mail size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', pointerEvents: 'none' }} />
-                <input
-                  type="email"
-                  className="form-input"
-                  style={{ paddingLeft: 36, borderColor: errors.email ? 'var(--red)' : undefined }}
+                <Mail size={14} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', pointerEvents: 'none' }} />
+                <input type="email" className="form-input"
+                  style={{ paddingLeft: 34, borderColor: errors.email ? 'var(--red)' : undefined }}
                   placeholder="you@example.com"
                   value={email}
                   onChange={e => { setEmail(e.target.value); setErrors(p => ({...p, email: ''})) }}
                   autoFocus
                 />
               </div>
-              {errors.email && <div style={{ color: 'var(--red)', fontSize: '0.78rem', marginTop: 4 }}>{errors.email}</div>}
+              {errors.email && <div style={{ color: 'var(--red)', fontSize: '0.75rem', marginTop: 4 }}>{errors.email}</div>}
             </div>
 
             <div className="form-group">
               <label className="form-label">Password</label>
               <div style={{ position: 'relative' }}>
-                <Lock size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', pointerEvents: 'none' }} />
-                <input
-                  type="password"
-                  className="form-input"
-                  style={{ paddingLeft: 36, borderColor: errors.password ? 'var(--red)' : undefined }}
+                <Lock size={14} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', pointerEvents: 'none' }} />
+                <input type="password" className="form-input"
+                  style={{ paddingLeft: 34, borderColor: errors.password ? 'var(--red)' : undefined }}
                   placeholder="••••••••"
                   value={password}
                   onChange={e => { setPassword(e.target.value); setErrors(p => ({...p, password: ''})) }}
                 />
               </div>
-              {errors.password && <div style={{ color: 'var(--red)', fontSize: '0.78rem', marginTop: 4 }}>{errors.password}</div>}
+              {errors.password && <div style={{ color: 'var(--red)', fontSize: '0.75rem', marginTop: 4 }}>{errors.password}</div>}
             </div>
 
             {errors.form && (
-              <div style={{ background: 'var(--red-dim)', border: '1px solid var(--red)', borderRadius: 8, padding: '8px 12px', color: 'var(--red)', fontSize: '0.8rem', marginBottom: 12 }}>
+              <div style={{
+                background: 'var(--red-dim)', border: '1px solid rgba(224,92,92,0.3)',
+                borderRadius: 8, padding: '8px 12px', color: 'var(--red)',
+                fontSize: '0.8rem', marginBottom: 12
+              }}>
                 {errors.form}
               </div>
             )}
 
             <button type="submit" className="btn btn-primary w-full"
-              style={{ justifyContent: 'center', padding: '11px', marginTop: 4 }} disabled={loading}>
-              {loading ? <><Loader2 size={15} className="spin" /> Signing in…</> : 'Sign In'}
+              style={{ justifyContent: 'center', padding: '11px', marginTop: 4 }}
+              disabled={loading}>
+              {loading ? <><Loader2 size={14} className="spin" /> Signing in…</> : 'Sign In'}
             </button>
           </form>
 
-          <p style={{ textAlign: 'center', marginTop: 20, fontSize: '0.78rem', color: 'var(--text-3)' }}>
+          <p style={{ textAlign: 'center', marginTop: 20, fontSize: '0.75rem', color: 'var(--text-3)' }}>
             Contact your admin to get access
           </p>
         </div>
       </div>
 
+      {/* Right decorative panel */}
       <div className="login-right">
         <div className="login-right-content">
           <div className="login-right-icon">🎪</div>
@@ -117,10 +133,13 @@ export default function LoginPage() {
             {features.map((f, i) => (
               <div key={i} className="login-feature">
                 <div className="login-feature-dot" />
-                <span style={{ color: 'var(--text-3)', marginRight: 6 }}>{f.icon}</span>
+                <span style={{ color: 'var(--text-3)', display: 'flex', marginRight: 4 }}>{f.icon}</span>
                 {f.text}
               </div>
             ))}
+          </div>
+          <div style={{ marginTop: 28, paddingTop: 20, borderTop: '1px solid var(--border)', fontSize: '0.72rem', color: 'var(--text-3)', textAlign: 'center' }}>
+            All Solutions · Kolkata
           </div>
         </div>
       </div>
