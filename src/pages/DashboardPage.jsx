@@ -60,7 +60,7 @@ function StatCard({ label, value, sub, color, icon, prefix = '' }) {
           <div style={{ fontSize: '0.72rem', color: 'var(--text-3)', marginTop: 8 }}>{sub}</div>
         </div>
         {/* Large faded icon */}
-        <div style={{ fontSize: '2.2rem', opacity: 0.15, lineHeight: 1, flexShrink: 0 }}>{icon}</div>
+        <div style={{ fontSize: '2.2rem', opacity: 0.15, lineHeight: 1.2, flexShrink: 0 }}>{icon}</div>
       </div>
     </div>
   )
@@ -125,7 +125,8 @@ export default function DashboardPage() {
               letterSpacing: '0.01em',
               marginBottom: 4,
               color: 'var(--text)',
-              lineHeight: 1.1,
+              lineHeight: 1.3,
+              paddingBottom: '0.1em',
             }}>
               {greet()}, {profile?.full_name?.split(' ')[0] || 'Boss'} 👋
             </h1>

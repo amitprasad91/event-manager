@@ -275,12 +275,13 @@ export default function LoginPage() {
 
                 {/* Sign In */}
                 <button type="submit" disabled={loading} style={{
-                  width:'100%', padding:'11px',
+                  width:'100%', padding:'13px 11px',
                   background:loading?'rgba(240,180,41,.25)':'linear-gradient(135deg,#b87008 0%,#f0b429 45%,#ff8c42 100%)',
                   border:'none', borderRadius:10,
                   color:loading?'rgba(255,255,255,.4)':'#1a0800',
                   fontFamily:'Syne,sans-serif', fontWeight:800,
                   fontSize:'.88rem', letterSpacing:'.05em',
+                  lineHeight:1.5,
                   cursor:loading?'not-allowed':'pointer',
                   display:'flex', alignItems:'center', justifyContent:'center', gap:7,
                   boxShadow:loading?'none':'0 6px 20px rgba(240,140,20,.3)',
