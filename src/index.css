@@ -716,3 +716,26 @@ tr:hover td { background: var(--bg-3); }
 .text-sm { font-size: 0.8125rem; }
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .w-full { width: 100%; }
+
+/* ============================================================
+   v202603.19.06 PATCH
+============================================================ */
+
+/* Mobile header — ensure hamburger never gets cut off */
+.mobile-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 200 !important;
+  height: 56px !important;
+}
+.mobile-header .hamburger {
+  flex-shrink: 0 !important;
+  min-width: 36px !important;
+}
+
+/* User pill — space for logout icon */
+.user-pill {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}

@@ -79,7 +79,7 @@ function StatCard({ label, value, sub, color, icon, prefix = '' }) {
 }
 
 export default function DashboardPage() {
-  const { profile } = useAuth()
+  const { profile, lastLogin } = useAuth()
   const navigate = useNavigate()
   const [stats, setStats] = useState({ events: 0, people: 0, revenue: 0, pending: 0 })
   const [upcoming, setUpcoming] = useState([])
@@ -133,6 +133,11 @@ export default function DashboardPage() {
               {greet()}, {profile?.full_name?.split(' ')[0] || 'Boss'} 👋
             </h1>
             <p style={{ color: 'var(--text-3)', fontSize: '0.875rem' }}>Here's your event business at a glance</p>
+          {lastLogin && (
+            <p style={{ color: 'var(--text-3)', fontSize: '0.72rem', marginTop: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span>🕐</span> Last login: {format(lastLogin, 'dd MMM yyyy, hh:mm a')}
+            </p>
+          )}
           </div>
           {/* Live version pill */}
           <div style={{
