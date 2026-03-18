@@ -1,3 +1,3 @@
-export const APP_VERSION = '202603.19.08'
+export const APP_VERSION = '202603.19.09'
 export const BUILD_DATE = '2026-03-19'
-export const BUILD_NOTES = 'Fix: mobile header brand hidden, stylish fonts for All Solutions & Welcome back'
+export const BUILD_NOTES = 'Fix: PWA install button - correct device detection, mobile/desktop label, install prompt'
