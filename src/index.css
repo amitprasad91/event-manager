@@ -739,3 +739,59 @@ tr:hover td { background: var(--bg-3); }
   align-items: center !important;
   gap: 10px !important;
 }
+
+/* ============================================================
+   v202603.19.08 PATCH — Fonts, mobile header, user-signout btn
+============================================================ */
+
+/* Shimmer animation for brand name */
+@keyframes shimmerText {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+/* Mobile header — 3-column grid so brand is always centred */
+.mobile-header {
+  display: none;
+  height: 56px !important;
+  background: #0a0f1e !important;
+  border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0 12px !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 200 !important;
+  flex-shrink: 0 !important;
+}
+@media (max-width: 768px) {
+  .mobile-header { display: flex !important; }
+}
+
+/* User + Sign Out button */
+.user-signout-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+  font-family: 'DM Sans', sans-serif;
+}
+.user-signout-btn:hover {
+  background: rgba(255,92,122,0.09);
+  border-color: rgba(255,92,122,0.22);
+}
+.user-signout-btn:hover .logout-icon {
+  color: #ff5c7a !important;
+}
+.logout-icon {
+  color: rgba(255,255,255,0.25);
+  flex-shrink: 0;
+  transition: color 0.15s;
+}

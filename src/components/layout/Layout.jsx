@@ -18,6 +18,41 @@ const NAV = [
   { label: 'Payments',         to: '/payments',  icon: CreditCard },
 ]
 
+// Reusable brand component — Cinzel for "All Solutions"
+export function BrandName({ fontSize = '1.05rem', showSub = true }) {
+  return (
+    <div>
+      <div style={{
+        fontFamily: '"Cinzel", "Playfair Display", serif',
+        fontWeight: 800,
+        fontSize,
+        letterSpacing: '0.04em',
+        lineHeight: 1,
+        background: 'linear-gradient(135deg, #c8860a 0%, #f0b429 40%, #ffd060 60%, #f0b429 80%, #c8860a 100%)',
+        backgroundSize: '200% auto',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text',
+        animation: 'shimmerText 4s linear infinite',
+      }}>
+        All Solutions
+      </div>
+      {showSub && (
+        <div style={{
+          fontSize: '0.55rem',
+          color: 'rgba(255,255,255,0.28)',
+          letterSpacing: '0.2em',
+          textTransform: 'uppercase',
+          marginTop: 2,
+          fontFamily: '"DM Sans", sans-serif',
+        }}>
+          Kolkata
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Layout() {
   const { profile, signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
@@ -30,19 +65,15 @@ export default function Layout() {
         <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
       )}
 
+      {/* ── Sidebar ── */}
       <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
-        {/* Brand */}
         <div className="sidebar-logo">
           <div className="brand-mark">
             <div className="brand-icon">🎪</div>
-            <div>
-              <div className="brand-text-main">All Solutions</div>
-              <div className="brand-text-sub">Kolkata</div>
-            </div>
+            <BrandName fontSize="1.05rem" showSub={true} />
           </div>
         </div>
 
-        {/* Nav */}
         <nav className="sidebar-nav">
           <div className="nav-section-label">Menu</div>
           {NAV.map(({ label, to, icon: Icon }) => (
@@ -55,107 +86,51 @@ export default function Layout() {
           ))}
         </nav>
 
-        {/* Footer */}
         <div className="sidebar-footer">
-
-          {/* Theme + Install */}
           <button onClick={toggleTheme} className="sidebar-action">
             {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
             {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
           </button>
           <PWAInstallButton />
-
           <div className="sidebar-divider" />
-
-          {/* Version */}
           <VersionBadge />
-
           <div className="sidebar-divider" />
 
-          {/* ── User + Sign Out — full width button at very bottom ── */}
-          <button
-            onClick={signOut}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              width: '100%',
-              padding: '10px 12px',
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.07)',
-              borderRadius: 10,
-              cursor: 'pointer',
-              transition: 'all 0.15s',
-              textAlign: 'left',
-              fontFamily: 'DM Sans, sans-serif',
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = 'rgba(255,92,122,0.10)'
-              e.currentTarget.style.borderColor = 'rgba(255,92,122,0.25)'
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'
-            }}
-          >
-            {/* Avatar */}
-            <div style={{
-              width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-              background: 'linear-gradient(135deg,#f0b429,#ff8c42)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: 'Syne,sans-serif', fontSize: '0.72rem',
-              fontWeight: 800, color: '#1a0800',
-              boxShadow: '0 2px 8px rgba(240,180,41,0.25)',
-            }}>
-              {initials}
+          {/* User + Sign Out — full width at bottom */}
+          <button onClick={signOut} className="user-signout-btn">
+            <div className="user-avatar">{initials}</div>
+            <div className="user-info">
+              <div className="user-name">{profile?.full_name || 'User'}</div>
+              <div className="user-role">{profile?.role || 'staff'}</div>
             </div>
-
-            {/* Name + role */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{
-                fontSize: '0.82rem', fontWeight: 600,
-                color: 'rgba(255,255,255,0.85)',
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}>
-                {profile?.full_name || 'User'}
-              </div>
-              <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', textTransform: 'capitalize' }}>
-                {profile?.role || 'staff'}
-              </div>
-            </div>
-
-            {/* Sign out icon */}
-            <LogOut size={14} style={{ color: 'rgba(255,92,122,0.7)', flexShrink: 0 }} />
+            <LogOut size={14} className="logout-icon" />
           </button>
         </div>
       </aside>
 
+      {/* ── Main ── */}
       <div className="main-content">
-        {/* Mobile header */}
-        <header className="mobile-header">
-          <button
-            className="hamburger"
-            onClick={() => setSidebarOpen(v => !v)}
-            aria-label="Toggle menu"
-          >
-            {sidebarOpen ? <X size={22} /> : <Menu size={22} />}
-          </button>
 
-          <div style={{ textAlign: 'center' }}>
-            <div style={{
-              fontFamily: 'Syne,sans-serif', fontWeight: 800, fontSize: '1rem',
-              background: 'linear-gradient(135deg,#f0b429,#ff8c42)',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text', letterSpacing: '-.02em', lineHeight: 1.1,
-            }}>All Solutions</div>
-            <div style={{ fontSize: '.55rem', color: 'rgba(255,255,255,.25)', letterSpacing: '.14em', textTransform: 'uppercase' }}>
-              Kolkata
-            </div>
+        {/* Mobile header — FIXED: brand centred, not hidden */}
+        <header className="mobile-header">
+          {/* Left: hamburger — fixed width so brand stays centred */}
+          <div style={{ width: 40, display: 'flex', alignItems: 'center' }}>
+            <button className="hamburger" onClick={() => setSidebarOpen(v => !v)} aria-label="Menu">
+              {sidebarOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
           </div>
 
-          <button onClick={toggleTheme} className="btn btn-ghost btn-icon btn-sm">
-            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
+          {/* Centre: brand — absolutely centred */}
+          <div style={{ textAlign: 'center' }}>
+            <BrandName fontSize="1rem" showSub={true} />
+          </div>
+
+          {/* Right: theme toggle — fixed width */}
+          <div style={{ width: 40, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+            <button onClick={toggleTheme} className="btn btn-ghost btn-icon btn-sm">
+              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+          </div>
         </header>
 
         <main className="page-content">

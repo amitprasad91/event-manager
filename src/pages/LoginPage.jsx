@@ -162,9 +162,18 @@ export default function LoginPage() {
                 <div style={{ fontSize:'.8rem', letterSpacing:'.3em', color:'rgba(240,180,41,.35)', marginBottom:8 }}>
                   ❧ ✦ ❧
                 </div>
-                <div className="shimmer-gold" style={{
-                  fontFamily:'Syne,sans-serif', fontWeight:900,
-                  fontSize:'1.85rem', letterSpacing:'-.02em', lineHeight:1,
+                <div style={{
+                  fontFamily:'"Cinzel","Playfair Display",serif',
+                  fontWeight: 800,
+                  fontSize: '1.85rem',
+                  letterSpacing: '0.06em',
+                  lineHeight: 1,
+                  background: 'linear-gradient(135deg,#c8860a 0%,#f0b429 40%,#ffd060 60%,#f0b429 80%,#c8860a 100%)',
+                  backgroundSize: '200% auto',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  animation: 'shimmerText 4s linear infinite',
                 }}>
                   All Solutions
                 </div>
@@ -190,8 +199,14 @@ export default function LoginPage() {
               {/* ── Welcome ── */}
               <div style={{ marginBottom:18 }}>
                 <h1 style={{
-                  fontFamily:'Syne,sans-serif', fontSize:'1.25rem', fontWeight:800,
-                  letterSpacing:'-.02em', color:'#fff', marginBottom:3,
+                  fontFamily:'"Cormorant Garamond","Garamond","Georgia",serif',
+                  fontSize: '1.8rem',
+                  fontWeight: 700,
+                  fontStyle: 'italic',
+                  letterSpacing: '0.01em',
+                  color: 'rgba(255,255,255,0.92)',
+                  marginBottom: 3,
+                  lineHeight: 1.1,
                 }}>Welcome back</h1>
                 <p style={{ color:'rgba(255,255,255,.3)', fontSize:'.78rem' }}>
                   Sign in to manage your events

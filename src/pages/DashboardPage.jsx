@@ -129,7 +129,16 @@ export default function DashboardPage() {
       <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <h1 style={{ fontSize: '1.6rem', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 4 }}>
+            <h1 style={{
+              fontFamily: '"Cormorant Garamond","Garamond","Georgia",serif',
+              fontSize: '2rem',
+              fontWeight: 700,
+              fontStyle: 'italic',
+              letterSpacing: '0.01em',
+              marginBottom: 4,
+              color: 'var(--text)',
+              lineHeight: 1.1,
+            }}>
               {greet()}, {profile?.full_name?.split(' ')[0] || 'Boss'} 👋
             </h1>
             <p style={{ color: 'var(--text-3)', fontSize: '0.875rem' }}>Here's your event business at a glance</p>
