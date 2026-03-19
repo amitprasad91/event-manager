@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 import { Plus, Search, X, Loader2, Users, Phone, Pencil, Trash2, ShieldCheck } from 'lucide-react'
+import { ROLES, PAY_TYPES, getRoleBadge } from '../lib/constants'
 
-const ROLES = ['admin', 'supervisor', 'staff', 'driver']
-const PAY_TYPES = ['daily', 'hourly', 'per_km', 'fixed_per_event', 'monthly']
+// ROLES and PAY_TYPES imported from constants
 
 function ConfirmDialog({ message, onConfirm, onCancel }) {
   return (
@@ -76,9 +76,12 @@ export default function PeoplePage() {
       if (error) { toast.error(error.message); return }
       toast.success('Profile updated!')
     } else {
-      toast('To add new staff, invite them via Supabase Auth dashboard.', { icon: 'ℹ️' })
+      // Generate a new UUID for staff who don't need a login account
+      const newId = crypto.randomUUID()
+      const { error } = await supabase.from('profiles').insert({ ...payload, id: newId })
       setSaving(false)
-      return
+      if (error) { toast.error(error.message); return }
+      toast.success('Person added!')
     }
     setShowModal(false)
     loadPeople()
@@ -97,9 +100,7 @@ export default function PeoplePage() {
     return !q || p.full_name?.toLowerCase().includes(q) || p.phone?.includes(q) || p.role?.includes(q)
   })
 
-  function roleBadge(r) {
-    return { admin: 'badge-gold', supervisor: 'badge-orange', staff: 'badge-blue', driver: 'badge-green' }[r] || 'badge-gray'
-  }
+  function roleBadge(r) { return getRoleBadge(r) }
 
   return (
     <div>
@@ -190,7 +191,7 @@ export default function PeoplePage() {
                 <div className="form-group">
                   <label className="form-label">Role</label>
                   <select className="form-select" value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
-                    {ROLES.map(r => <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>)}
+                    {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                   </select>
                 </div>
               </div>
@@ -198,7 +199,7 @@ export default function PeoplePage() {
                 <div className="form-group">
                   <label className="form-label">Pay Type</label>
                   <select className="form-select" value={form.pay_type} onChange={e => setForm({...form, pay_type: e.target.value})}>
-                    {PAY_TYPES.map(t => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
+                    {PAY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
                 </div>
                 <div className="form-group">
