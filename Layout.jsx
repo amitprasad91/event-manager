@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
-import { Plus, Search, X, Loader2, Truck, Phone, Pencil, Trash2, CheckCircle, MapPin } from 'lucide-react'
-import { VEHICLE_TYPES, TRANSPORT_PAY_METHODS, TRIP_STATUSES, fmtRs, formatTel, openGoogleMaps } from '../lib/constants'
-import { format } from 'date-fns'
+import { Plus, Search, X, Loader2, CalendarDays, MapPin, Pencil, Trash2, ChevronLeft, ChevronRight, List } from 'lucide-react'
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isSameDay, parseISO } from 'date-fns'
+import { EVENT_TYPES, EVENT_STATUSES, getEventStatusBadge, getEventTypeBadge, getEventTypeEmoji } from '../lib/constants'
 
-function ConfirmDialog({ onConfirm, onCancel }) {
+function ConfirmDialog({ title, onConfirm, onCancel }) {
   return (
     <div className="confirm-overlay">
       <div className="confirm-box">
         <div style={{ fontSize: '2rem', marginBottom: 12 }}>🗑️</div>
-        <h3>Delete Trip?</h3>
-        <p>This transport trip will be permanently removed.</p>
+        <h3>Delete Event?</h3>
+        <p>"{title}" will be permanently deleted including all items and payments.</p>
         <div className="confirm-actions">
           <button className="btn btn-secondary" onClick={onCancel}>Cancel</button>
           <button className="btn btn-danger" onClick={onConfirm}>Yes, Delete</button>
@@ -21,32 +22,27 @@ function ConfirmDialog({ onConfirm, onCancel }) {
   )
 }
 
-function validate(form) {
-  const errors = {}
-  if (!form.event_id)             errors.event_id = 'Please select an event'
-  if (!form.trip_date)            errors.trip_date = 'Trip date is required'
-  if (form.amount && isNaN(parseFloat(form.amount))) errors.amount = 'Must be a valid number'
-  if (form.km && isNaN(parseFloat(form.km)))         errors.km = 'Must be a valid number'
-  return errors
-}
-
-export default function TransportPage() {
-  const [trips, setTrips]         = useState([])
-  const [events, setEvents]       = useState([])
-  const [drivers, setDrivers]     = useState([])
-  const [search, setSearch]       = useState('')
+export default function EventsPage() {
+  const navigate = useNavigate()
+  const [events, setEvents]     = useState([])
+  const [clients, setClients]   = useState([])
+  const [venues, setVenues]     = useState([])
+  const [search, setSearch]     = useState('')
   const [filterStatus, setFilterStatus] = useState('')
-  const [loading, setLoading]     = useState(true)
+  const [loading, setLoading]   = useState(true)
   const [showModal, setShowModal] = useState(false)
-  const [saving, setSaving]       = useState(false)
-  const [editing, setEditing]     = useState(null)
+  const [saving, setSaving]     = useState(false)
+  const [editing, setEditing]   = useState(null)
   const [confirmId, setConfirmId] = useState(null)
-  const [updatingId, setUpdatingId] = useState(null)
-  const [errors, setErrors]       = useState({})
+  const [confirmTitle, setConfirmTitle] = useState('')
+  const [viewMode, setViewMode] = useState('list') // 'list' | 'calendar'
+  const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [selectedEvent, setSelectedEvent] = useState(null)
+
   const emptyForm = {
-    event_id: '', driver_profile_id: '', vehicle_type: VEHICLE_TYPES[0].value,
-    pickup_location: '', drop_location: '', km: '', amount: '',
-    pay_method: 'per_km', trip_date: '', notes: '', payment_status: 'pending'
+    title: '', event_type: EVENT_TYPES[0].value, client_id: '',
+    venue_id: '', event_date: '', start_time: '',
+    end_time: '', client_amount: '', notes: '', status: EVENT_STATUSES[0].value
   }
   const [form, setForm] = useState(emptyForm)
 
@@ -54,259 +50,364 @@ export default function TransportPage() {
 
   async function loadAll() {
     setLoading(true)
-    const [tripsRes, evRes, driversRes] = await Promise.all([
-      supabase.from('transport_trips')
-        .select('*, events(title, event_date, venues(name, google_maps_url)), profiles(full_name, phone)')
-        .order('trip_date', { ascending: false }),
-      supabase.from('events').select('id, title, event_date').in('status', ['upcoming','ongoing','completed']).order('event_date', { ascending: false }),
-      supabase.from('profiles').select('id, full_name, phone').in('role', ['driver','staff','supervisor']).order('full_name'),
+    const [evRes, clRes, veRes] = await Promise.all([
+      supabase.from('events').select('*, clients(full_name, phone), venues(name, google_maps_url)').order('event_date', { ascending: false }),
+      supabase.from('clients').select('id, full_name').order('full_name'),
+      supabase.from('venues').select('id, name').order('name'),
     ])
-    setTrips(tripsRes.data || [])
     setEvents(evRes.data || [])
-    setDrivers(driversRes.data || [])
+    setClients(clRes.data || [])
+    setVenues(veRes.data || [])
     setLoading(false)
   }
 
-  function openEdit(t) {
-    setEditing(t)
-    setErrors({})
+  function openEdit(ev, e) {
+    e?.stopPropagation()
+    setEditing(ev)
     setForm({
-      event_id: t.event_id || '', driver_profile_id: t.driver_profile_id || '',
-      vehicle_type: t.vehicle_type || VEHICLE_TYPES[0].value,
-      pickup_location: t.pickup_location || '', drop_location: t.drop_location || '',
-      km: t.km || '', amount: t.amount || '', pay_method: t.pay_method || 'per_km',
-      trip_date: t.trip_date || '', notes: t.notes || '', payment_status: t.payment_status || 'pending'
+      title: ev.title, event_type: ev.event_type, client_id: ev.client_id || '',
+      venue_id: ev.venue_id || '', event_date: ev.event_date, start_time: ev.start_time || '',
+      end_time: ev.end_time || '', client_amount: ev.client_amount || '', notes: ev.notes || '', status: ev.status
     })
     setShowModal(true)
+    setSelectedEvent(null)
   }
 
   function openNew() {
     setEditing(null)
-    setErrors({})
     setForm(emptyForm)
     setShowModal(true)
   }
 
   async function handleSave(e) {
     e.preventDefault()
-    const errs = validate(form)
-    if (Object.keys(errs).length) { setErrors(errs); return }
     setSaving(true)
-    const payload = {
-      ...form,
-      km:     form.km     ? parseFloat(form.km)     : null,
-      amount: form.amount ? parseFloat(form.amount) : 0,
-    }
-    if (!payload.driver_profile_id) delete payload.driver_profile_id
+    const payload = { ...form, client_amount: parseFloat(form.client_amount) || 0 }
+    if (!payload.client_id)  delete payload.client_id
+    if (!payload.venue_id)   delete payload.venue_id
+    if (!payload.start_time) delete payload.start_time
+    if (!payload.end_time)   delete payload.end_time
     let error
     if (editing) {
-      ;({ error } = await supabase.from('transport_trips').update(payload).eq('id', editing.id))
+      ;({ error } = await supabase.from('events').update(payload).eq('id', editing.id))
     } else {
-      ;({ error } = await supabase.from('transport_trips').insert(payload))
+      ;({ error } = await supabase.from('events').insert(payload))
     }
     setSaving(false)
     if (error) { toast.error(error.message); return }
-    toast.success(editing ? 'Trip updated!' : 'Trip added!')
+    toast.success(editing ? 'Event updated!' : 'Event created!')
     setShowModal(false)
-    loadAll()
-  }
-
-  async function markPaid(id) {
-    setUpdatingId(id)
-    const { error } = await supabase.from('transport_trips').update({ payment_status: 'paid', amount_paid: trips.find(t => t.id === id)?.amount }).eq('id', id)
-    setUpdatingId(null)
-    if (error) { toast.error(error.message); return }
-    toast.success('Marked as paid!')
+    setForm(emptyForm)
+    setEditing(null)
     loadAll()
   }
 
   async function handleDelete(id) {
-    const { error } = await supabase.from('transport_trips').delete().eq('id', id)
+    const { error } = await supabase.from('events').delete().eq('id', id)
     setConfirmId(null)
     if (error) { toast.error(error.message); return }
-    toast.success('Trip deleted!')
+    toast.success('Event deleted!')
+    setSelectedEvent(null)
     loadAll()
   }
 
-  const filtered = trips.filter(t => {
+  // ── Calendar helpers ─────────────────────────────────────
+  function getEventsForDay(date) {
+    return events.filter(ev => isSameDay(parseISO(ev.event_date), date))
+  }
+
+  function renderCalendar() {
+    const monthStart  = startOfMonth(currentMonth)
+    const monthEnd    = endOfMonth(currentMonth)
+    const calStart    = startOfWeek(monthStart, { weekStartsOn: 1 })
+    const calEnd      = endOfWeek(monthEnd, { weekStartsOn: 1 })
+    const days = []
+    let day = calStart
+    while (day <= calEnd) { days.push(day); day = addDays(day, 1) }
+
+    const statusColor = { upcoming: 'var(--blue)', ongoing: 'var(--green)', completed: 'var(--text-3)', cancelled: 'var(--red)' }
+
+    return (
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        {/* Calendar header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
+          <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}><ChevronLeft size={16} /></button>
+          <span style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: '1rem' }}>{format(currentMonth, 'MMMM yyyy')}</span>
+          <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight size={16} /></button>
+        </div>
+
+        {/* Day labels */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid var(--border)' }}>
+          {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d => (
+            <div key={d} style={{ textAlign: 'center', padding: '8px 4px', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-3)', fontFamily: 'Syne', letterSpacing: '0.06em' }}>{d}</div>
+          ))}
+        </div>
+
+        {/* Days grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
+          {days.map((d, i) => {
+            const dayEvents = getEventsForDay(d)
+            const isToday   = isSameDay(d, new Date())
+            const isThisMonth = isSameMonth(d, currentMonth)
+            return (
+              <div key={i} style={{
+                minHeight: 80, padding: '6px 4px',
+                borderRight: '1px solid var(--border)',
+                borderBottom: '1px solid var(--border)',
+                background: isToday ? 'rgba(108,99,255,0.06)' : 'transparent',
+                opacity: isThisMonth ? 1 : 0.35,
+              }}>
+                <div style={{
+                  fontSize: '0.78rem', fontWeight: isToday ? 800 : 500,
+                  color: isToday ? 'var(--accent-light)' : 'var(--text-2)',
+                  marginBottom: 4, textAlign: 'right', paddingRight: 4,
+                }}>{format(d, 'd')}</div>
+
+                {dayEvents.slice(0, 3).map(ev => (
+                  <div key={ev.id}
+                    onClick={() => setSelectedEvent(ev)}
+                    style={{
+                      fontSize: '0.68rem', fontWeight: 600,
+                      background: `${statusColor[ev.status]}22`,
+                      border: `1px solid ${statusColor[ev.status]}44`,
+                      color: statusColor[ev.status],
+                      borderRadius: 4, padding: '2px 5px',
+                      marginBottom: 2, cursor: 'pointer',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      transition: 'opacity 0.15s',
+                    }}
+                    title={ev.title}
+                  >
+                    {getEventTypeEmoji(ev.event_type)} {ev.title}
+                  </div>
+                ))}
+                {dayEvents.length > 3 && (
+                  <div style={{ fontSize: '0.62rem', color: 'var(--text-3)', paddingLeft: 4 }}>+{dayEvents.length - 3} more</div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
+  const filtered = events.filter(e => {
     const q = search.toLowerCase()
-    const matchQ = !q || t.events?.title?.toLowerCase().includes(q) || t.profiles?.full_name?.toLowerCase().includes(q) || t.pickup_location?.toLowerCase().includes(q)
-    const matchS = !filterStatus || t.payment_status === filterStatus
+    const matchQ = !q || e.title.toLowerCase().includes(q) || e.clients?.full_name?.toLowerCase().includes(q)
+    const matchS  = !filterStatus || e.status === filterStatus
     return matchQ && matchS
   })
 
-  const totalDue = trips.filter(t => t.payment_status !== 'paid').reduce((s, t) => s + (t.amount || 0), 0)
-
   return (
     <div>
-      {confirmId && <ConfirmDialog onConfirm={() => handleDelete(confirmId)} onCancel={() => setConfirmId(null)} />}
+      {confirmId && (
+        <ConfirmDialog
+          title={confirmTitle}
+          onConfirm={() => handleDelete(confirmId)}
+          onCancel={() => setConfirmId(null)}
+        />
+      )}
 
-      <div className="page-header">
-        <div>
-          <div className="page-title">Transport</div>
-          <div className="page-subtitle">{trips.length} trips · {fmtRs(totalDue)} pending payment</div>
-        </div>
-        <button className="btn btn-primary" onClick={openNew}><Plus size={14} /> Add Trip</button>
-      </div>
-
-      <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
-        <div className="search-bar" style={{ flex: 1, minWidth: 180, marginBottom: 0 }}>
-          <Search size={15} />
-          <input placeholder="Search by event, driver or location…" value={search} onChange={e => setSearch(e.target.value)} />
-          {search && <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setSearch('')}><X size={13} /></button>}
-        </div>
-        <select className="form-select" style={{ width: 140 }} value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-          <option value="">All Status</option>
-          {TRIP_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-        </select>
-      </div>
-
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: 40 }}><Loader2 size={24} className="spin" style={{ color: 'var(--text-3)' }} /></div>
-      ) : filtered.length === 0 ? (
-        <div className="empty-state"><Truck size={40} className="empty-state-icon" /><h3>No trips found</h3></div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {filtered.map(t => (
-            <div key={t.id} style={{
-              background: 'var(--bg-2)', border: '1px solid var(--border)',
-              borderRadius: 14, padding: '14px 16px',
-            }}>
-              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                {/* Truck icon */}
-                <div style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(255,140,66,0.12)', border: '1px solid rgba(255,140,66,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Truck size={16} style={{ color: 'var(--orange)' }} />
-                </div>
-
-                {/* Info */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 4 }}>
-                    <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{t.events?.title || '—'}</span>
-                    <span className="badge badge-gray">{t.vehicle_type}</span>
-                    <span className={`badge ${TRIP_STATUSES.find(s => s.value === t.payment_status)?.badge || 'badge-gray'}`}>
-                      {t.payment_status}
-                    </span>
-                  </div>
-
-                  {/* Route */}
-                  {(t.pickup_location || t.drop_location) && (
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-3)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <MapPin size={10} />
-                      {t.pickup_location || '?'} → {t.drop_location || '?'}
-                      {t.events?.venues?.google_maps_url && (
-                        <button onClick={() => openGoogleMaps(t.events.venues.google_maps_url)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--green)', padding: 0, marginLeft: 4, fontSize: '0.72rem' }}>
-                          Navigate
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', fontSize: '0.75rem', color: 'var(--text-3)' }}>
-                    {t.trip_date && <span>📅 {format(new Date(t.trip_date), 'dd MMM yyyy')}</span>}
-                    {t.km && <span>🛣️ {t.km} km</span>}
-                    {t.profiles && (
-                      <a href={`tel:${formatTel(t.profiles.phone)}`} style={{ color: 'var(--blue)', display: 'flex', alignItems: 'center', gap: 3 }}>
-                        <Phone size={10} /> {t.profiles.full_name}
-                      </a>
-                    )}
-                  </div>
-                </div>
-
-                {/* Amount + actions */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
-                  <span style={{ fontWeight: 700, color: 'var(--gold)', fontFamily: 'monospace', fontSize: '0.9rem' }}>
-                    {fmtRs(t.amount)}
-                  </span>
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    {t.payment_status !== 'paid' && (
-                      <button onClick={() => markPaid(t.id)} disabled={updatingId === t.id}
-                        className="btn btn-sm" style={{ background: 'rgba(16,212,160,0.1)', border: '1px solid rgba(16,212,160,0.25)', color: 'var(--green)' }}>
-                        {updatingId === t.id ? <Loader2 size={12} className="spin" /> : <><CheckCircle size={11} /> Pay</>}
-                      </button>
-                    )}
-                    <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(t)}><Pencil size={13} /></button>
-                    <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setConfirmId(t.id)} style={{ color: 'var(--red)' }}><Trash2 size={13} /></button>
-                  </div>
-                </div>
-              </div>
+      {/* Event detail popup from calendar */}
+      {selectedEvent && (
+        <div className="modal-overlay" onClick={() => setSelectedEvent(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <span className="modal-title">{getEventTypeEmoji(selectedEvent.event_type)} {selectedEvent.title}</span>
+              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setSelectedEvent(null)}><X size={16} /></button>
             </div>
-          ))}
+            <div style={{ padding: '0 0 16px' }}>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+                <span className={`badge ${getEventStatusBadge(selectedEvent.status)}`}>{selectedEvent.status}</span>
+                <span className={`badge ${getEventTypeBadge(selectedEvent.event_type)}`}>{selectedEvent.event_type}</span>
+              </div>
+              {[
+                ['📅 Date', format(parseISO(selectedEvent.event_date), 'dd MMM yyyy')],
+                ['⏰ Time', selectedEvent.start_time ? `${selectedEvent.start_time}${selectedEvent.end_time ? ' – ' + selectedEvent.end_time : ''}` : '—'],
+                ['👤 Client', selectedEvent.clients?.full_name || '—'],
+                ['📍 Venue', selectedEvent.venues?.name || '—'],
+                ['💰 Amount', selectedEvent.client_amount > 0 ? `₹${selectedEvent.client_amount.toLocaleString('en-IN')}` : '—'],
+                ['📝 Notes', selectedEvent.notes || '—'],
+              ].map(([label, value]) => (
+                <div key={label} style={{ display: 'flex', gap: 10, marginBottom: 8, fontSize: '0.85rem' }}>
+                  <span style={{ color: 'var(--text-3)', minWidth: 90 }}>{label}</span>
+                  <span style={{ color: 'var(--text)', fontWeight: 500 }}>{value}</span>
+                </div>
+              ))}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => { setSelectedEvent(null); openEdit(selectedEvent) }}><Pencil size={13} /> Edit</button>
+              <button className="btn btn-secondary" style={{ color: 'var(--red)' }} onClick={() => { setSelectedEvent(null); setConfirmId(selectedEvent.id); setConfirmTitle(selectedEvent.title) }}><Trash2 size={13} /> Delete</button>
+              <button className="btn btn-primary" onClick={() => { setSelectedEvent(null); navigate(`/events/${selectedEvent.id}`) }}>View Details</button>
+            </div>
+          </div>
         </div>
       )}
 
+      <div className="page-header">
+        <div>
+          <div className="page-title">Events</div>
+          <div className="page-subtitle">{events.length} total bookings</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {/* Fix #6: View toggle */}
+          <div style={{ display: 'flex', background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+            <button onClick={() => setViewMode('list')} style={{
+              padding: '7px 12px', border: 'none', cursor: 'pointer', fontSize: '0.8rem',
+              background: viewMode === 'list' ? 'var(--accent)' : 'transparent',
+              color: viewMode === 'list' ? '#fff' : 'var(--text-2)',
+              display: 'flex', alignItems: 'center', gap: 5,
+            }}><List size={13} /> List</button>
+            <button onClick={() => setViewMode('calendar')} style={{
+              padding: '7px 12px', border: 'none', cursor: 'pointer', fontSize: '0.8rem',
+              background: viewMode === 'calendar' ? 'var(--accent)' : 'transparent',
+              color: viewMode === 'calendar' ? '#fff' : 'var(--text-2)',
+              display: 'flex', alignItems: 'center', gap: 5,
+            }}><CalendarDays size={13} /> Calendar</button>
+          </div>
+          <button className="btn btn-primary" onClick={openNew}><Plus size={15} /> New Event</button>
+        </div>
+      </div>
+
+      {/* Filters — only in list view */}
+      {viewMode === 'list' && (
+        <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+          <div className="search-bar" style={{ flex: 1, minWidth: 200, marginBottom: 0 }}>
+            <Search size={15} />
+            <input placeholder="Search events or clients…" value={search} onChange={e => setSearch(e.target.value)} />
+            {search && <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setSearch('')}><X size={13} /></button>}
+          </div>
+          <select className="form-select" style={{ width: 150 }} value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+            <option value="">All Status</option>
+            {EVENT_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
+        </div>
+      )}
+
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 40 }}><Loader2 size={24} className="spin" style={{ color: 'var(--text-3)' }} /></div>
+      ) : viewMode === 'calendar' ? (
+        renderCalendar()
+      ) : filtered.length === 0 ? (
+        <div className="empty-state"><CalendarDays size={40} className="empty-state-icon" /><h3>No events found</h3></div>
+      ) : (
+        <div className="card" style={{ padding: 0 }}>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Event</th><th>Date</th><th>Client</th><th>Venue</th><th>Type</th><th>Status</th><th>Amount</th><th>Actions</th></tr>
+              </thead>
+              <tbody>
+                {filtered.map(ev => (
+                  <tr key={ev.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/events/${ev.id}`)}>
+                    <td style={{ fontWeight: 600 }}>{ev.title}</td>
+                    <td style={{ color: 'var(--text-2)', fontSize: '0.85rem' }}>{format(new Date(ev.event_date), 'dd MMM yyyy')}</td>
+                    <td style={{ color: 'var(--text-2)' }}>{ev.clients?.full_name || '—'}</td>
+                    <td>
+                      {ev.venues ? (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <MapPin size={11} style={{ color: 'var(--text-3)' }} />
+                          <span style={{ fontSize: '0.85rem' }}>{ev.venues.name}</span>
+                        </span>
+                      ) : '—'}
+                    </td>
+                    <td><span className={`badge ${getEventTypeBadge(ev.event_type)}`}>{ev.event_type}</span></td>
+                    <td><span className={`badge ${getEventStatusBadge(ev.status)}`}>{ev.status}</span></td>
+                    <td>
+                      {ev.client_amount > 0 && (
+                        <span style={{ color: 'var(--gold)', fontWeight: 600, fontSize: '0.875rem', fontFamily: 'monospace' }}>
+                          ₹{ev.client_amount.toLocaleString('en-IN')}
+                        </span>
+                      )}
+                    </td>
+                    {/* Fix #5: Edit + Delete actions */}
+                    <td>
+                      <div className="row-actions" onClick={e => e.stopPropagation()}>
+                        <button className="btn btn-ghost btn-icon btn-sm" title="Edit" onClick={e => openEdit(ev, e)}><Pencil size={13} /></button>
+                        <button className="btn btn-ghost btn-icon btn-sm" title="Delete" style={{ color: 'var(--red)' }}
+                          onClick={e => { e.stopPropagation(); setConfirmId(ev.id); setConfirmTitle(ev.title) }}>
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* New / Edit Modal */}
       {showModal && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
           <div className="modal">
             <div className="modal-header">
-              <span className="modal-title">{editing ? 'Edit Trip' : 'Add Transport Trip'}</span>
-              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setShowModal(false)}><X size={16} /></button>
+              <span className="modal-title">{editing ? 'Edit Event' : 'New Event'}</span>
+              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => { setShowModal(false); setEditing(null) }}><X size={16} /></button>
             </div>
-            <form onSubmit={handleSave} noValidate>
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Event *</label>
-                  <select className="form-select" style={{ borderColor: errors.event_id ? 'var(--red)' : undefined }}
-                    value={form.event_id} onChange={e => setForm({...form, event_id: e.target.value})}>
-                    <option value="">Select event…</option>
-                    {events.map(ev => <option key={ev.id} value={ev.id}>{ev.title}</option>)}
-                  </select>
-                  {errors.event_id && <div style={{ color: 'var(--red)', fontSize: '0.75rem', marginTop: 3 }}>{errors.event_id}</div>}
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Trip Date *</label>
-                  <input type="date" className="form-input" style={{ borderColor: errors.trip_date ? 'var(--red)' : undefined }}
-                    value={form.trip_date} onChange={e => setForm({...form, trip_date: e.target.value})} />
-                  {errors.trip_date && <div style={{ color: 'var(--red)', fontSize: '0.75rem', marginTop: 3 }}>{errors.trip_date}</div>}
-                </div>
+            <form onSubmit={handleSave}>
+              <div className="form-group">
+                <label className="form-label">Event Title *</label>
+                <input className="form-input" value={form.title} onChange={e => setForm({...form, title: e.target.value})} placeholder="e.g. Sharma Wedding" required />
               </div>
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">Driver</label>
-                  <select className="form-select" value={form.driver_profile_id} onChange={e => setForm({...form, driver_profile_id: e.target.value})}>
-                    <option value="">Select driver…</option>
-                    {drivers.map(d => <option key={d.id} value={d.id}>{d.full_name}</option>)}
+                  <label className="form-label">Event Type</label>
+                  <select className="form-select" value={form.event_type} onChange={e => setForm({...form, event_type: e.target.value})}>
+                    {EVENT_TYPES.map(t => <option key={t.value} value={t.value}>{t.emoji} {t.label}</option>)}
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Vehicle</label>
-                  <select className="form-select" value={form.vehicle_type} onChange={e => setForm({...form, vehicle_type: e.target.value})}>
-                    {VEHICLE_TYPES.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
+                  <label className="form-label">Status</label>
+                  <select className="form-select" value={form.status} onChange={e => setForm({...form, status: e.target.value})}>
+                    {EVENT_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                   </select>
                 </div>
               </div>
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">Pickup Location</label>
-                  <input className="form-input" value={form.pickup_location} onChange={e => setForm({...form, pickup_location: e.target.value})} placeholder="Godown A, Park Street…" />
+                  <label className="form-label">Client</label>
+                  <select className="form-select" value={form.client_id} onChange={e => setForm({...form, client_id: e.target.value})}>
+                    <option value="">Select client…</option>
+                    {clients.map(c => <option key={c.id} value={c.id}>{c.full_name}</option>)}
+                  </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Drop Location</label>
-                  <input className="form-input" value={form.drop_location} onChange={e => setForm({...form, drop_location: e.target.value})} placeholder="ITC Royal Bengal…" />
+                  <label className="form-label">Venue</label>
+                  <select className="form-select" value={form.venue_id} onChange={e => setForm({...form, venue_id: e.target.value})}>
+                    <option value="">Select venue…</option>
+                    {venues.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+                  </select>
                 </div>
               </div>
               <div className="form-row-3">
                 <div className="form-group">
-                  <label className="form-label">Pay Method</label>
-                  <select className="form-select" value={form.pay_method} onChange={e => setForm({...form, pay_method: e.target.value})}>
-                    {TRANSPORT_PAY_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                  </select>
+                  <label className="form-label">Date *</label>
+                  <input type="date" className="form-input" value={form.event_date} onChange={e => setForm({...form, event_date: e.target.value})} required />
                 </div>
-                {form.pay_method === 'per_km' && (
-                  <div className="form-group">
-                    <label className="form-label">Distance (km)</label>
-                    <input type="number" className="form-input" value={form.km} onChange={e => setForm({...form, km: e.target.value})} placeholder="0" />
-                  </div>
-                )}
                 <div className="form-group">
-                  <label className="form-label">Amount (₹)</label>
-                  <input type="number" className="form-input" style={{ borderColor: errors.amount ? 'var(--red)' : undefined }}
-                    value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} placeholder="0" />
+                  <label className="form-label">Start Time</label>
+                  <input type="time" className="form-input" value={form.start_time} onChange={e => setForm({...form, start_time: e.target.value})} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">End Time</label>
+                  <input type="time" className="form-input" value={form.end_time} onChange={e => setForm({...form, end_time: e.target.value})} />
                 </div>
               </div>
+              <div className="form-group">
+                <label className="form-label">Client Amount (₹)</label>
+                <input type="number" className="form-input" value={form.client_amount} onChange={e => setForm({...form, client_amount: e.target.value})} placeholder="0" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Notes</label>
+                <textarea className="form-textarea" value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} placeholder="Any special instructions…" />
+              </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
+                <button type="button" className="btn btn-secondary" onClick={() => { setShowModal(false); setEditing(null) }}>Cancel</button>
                 <button type="submit" className="btn btn-primary" disabled={saving}>
-                  {saving ? <Loader2 size={14} className="spin" /> : editing ? 'Save Changes' : 'Add Trip'}
+                  {saving ? <Loader2 size={14} className="spin" /> : editing ? 'Save Changes' : <><Plus size={14} /> Create Event</>}
                 </button>
               </div>
             </form>
