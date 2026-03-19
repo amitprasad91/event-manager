@@ -1,44 +1,43 @@
 import { useState } from 'react'
-import { Outlet, NavLink } from 'react-router-dom'
+import { Outlet, NavLink, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import PWAInstallButton from '../PWAInstall'
 import VersionBadge from '../VersionBadge'
+import { getNavForRole, canAccessPage } from '../../lib/permissions'
 import {
   LayoutDashboard, CalendarDays, Users, UserCircle,
   Package, CreditCard, Menu, X, LogOut, Sun, Moon,
   MapPin, Mic2, Truck, Users2, PieChart
 } from 'lucide-react'
 
-const NAV = [
-  { section: 'Main',
-    items: [
-      { label: 'Dashboard',        to: '/dashboard',    icon: LayoutDashboard },
-      { label: 'Events',           to: '/events',       icon: CalendarDays },
-    ]
-  },
-  { section: 'Directory',
-    items: [
-      { label: 'People & Staff',   to: '/people',       icon: Users },
-      { label: 'Clients',          to: '/clients',      icon: UserCircle },
-      { label: 'Performers',       to: '/performers',   icon: Mic2 },
-      { label: 'Venues',           to: '/venues',       icon: MapPin },
-    ]
-  },
-  { section: 'Operations',
-    items: [
-      { label: 'Machines & Items', to: '/machines',     icon: Package },
-      { label: 'Transport',        to: '/transport',    icon: Truck },
-      { label: 'Payments',         to: '/payments',     icon: CreditCard },
-    ]
-  },
-  { section: 'Finance',
-    items: [
-      { label: 'Co-Owners',        to: '/co-owners',    icon: Users2 },
-      { label: 'Profit Split',     to: '/profit-split', icon: PieChart },
-    ]
-  },
-]
+const ICON_MAP = {
+  'Dashboard':        LayoutDashboard,
+  'Events':           CalendarDays,
+  'People & Staff':   Users,
+  'Clients':          UserCircle,
+  'Performers':       Mic2,
+  'Venues':           MapPin,
+  'Machines & Items': Package,
+  'Transport':        Truck,
+  'Payments':         CreditCard,
+  'Co-Owners':        Users2,
+  'Profit Split':     PieChart,
+}
+
+const ROUTE_MAP = {
+  'Dashboard':        '/dashboard',
+  'Events':           '/events',
+  'People & Staff':   '/people',
+  'Clients':          '/clients',
+  'Performers':       '/performers',
+  'Venues':           '/venues',
+  'Machines & Items': '/machines',
+  'Transport':        '/transport',
+  'Payments':         '/payments',
+  'Co-Owners':        '/co-owners',
+  'Profit Split':     '/profit-split',
+}
 
 export function BrandName({ fontSize = '1.05rem', showSub = true }) {
   return (
@@ -64,8 +63,17 @@ export function BrandName({ fontSize = '1.05rem', showSub = true }) {
 export default function Layout() {
   const { profile, signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
+  const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  const role    = profile?.role || 'staff'
   const initials = profile?.full_name?.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase() || 'U'
+  const navSections = getNavForRole(role)
+
+  // Fix #17: Redirect to dashboard if trying to access unauthorized page
+  if (!canAccessPage(role, location.pathname)) {
+    return <Navigate to="/dashboard" replace />
+  }
 
   return (
     <div className="app-shell">
@@ -80,22 +88,37 @@ export default function Layout() {
         </div>
 
         <nav className="sidebar-nav">
-          {NAV.map(({ section, items }) => (
+          {/* Fix #17: Only show nav items allowed for this role */}
+          {Object.entries(navSections).map(([section, items]) => (
             <div key={section}>
               <div className="nav-section-label">{section}</div>
-              {items.map(({ label, to, icon: Icon }) => (
-                <NavLink key={to} to={to}
-                  className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                  onClick={() => setSidebarOpen(false)}>
-                  <Icon size={16} />
-                  {label}
-                </NavLink>
-              ))}
+              {items.map(label => {
+                const Icon = ICON_MAP[label]
+                const to   = ROUTE_MAP[label]
+                if (!Icon || !to) return null
+                return (
+                  <NavLink key={to} to={to}
+                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                    onClick={() => setSidebarOpen(false)}>
+                    <Icon size={16} />
+                    {label}
+                  </NavLink>
+                )
+              })}
             </div>
           ))}
         </nav>
 
         <div className="sidebar-footer">
+          {/* Fix #17: Show role badge in sidebar footer */}
+          <div style={{
+            fontSize: '0.65rem', textAlign: 'center', marginBottom: 8,
+            color: 'var(--text-3)', letterSpacing: '0.1em', textTransform: 'uppercase',
+            fontFamily: 'Syne', fontWeight: 700,
+          }}>
+            {role === 'admin' ? '👑 Admin' : role === 'supervisor' ? '👷 Supervisor' : role === 'driver' ? '🚛 Driver' : '👤 Staff'}
+          </div>
+
           <button onClick={toggleTheme} className="sidebar-action">
             {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
             {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}

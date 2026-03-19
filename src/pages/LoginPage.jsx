@@ -202,7 +202,8 @@ export default function LoginPage() {
                   letterSpacing: '0.01em',
                   color: 'rgba(255,255,255,0.92)',
                   marginBottom: 3,
-                  lineHeight: 1.1,
+                  lineHeight: 1.4,
+                  paddingBottom: '0.1em',
                 }}>Welcome back</h1>
                 <p style={{ color:'rgba(255,255,255,.3)', fontSize:'.78rem' }}>
                   Sign in to manage your events
@@ -281,7 +282,8 @@ export default function LoginPage() {
                   color:loading?'rgba(255,255,255,.4)':'#1a0800',
                   fontFamily:'Syne,sans-serif', fontWeight:800,
                   fontSize:'.88rem', letterSpacing:'.05em',
-                  lineHeight:1.5,
+                  lineHeight:1.6,
+                  minHeight: 46,
                   cursor:loading?'not-allowed':'pointer',
                   display:'flex', alignItems:'center', justifyContent:'center', gap:7,
                   boxShadow:loading?'none':'0 6px 20px rgba(240,140,20,.3)',

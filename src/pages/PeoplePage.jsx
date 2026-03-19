@@ -4,8 +4,6 @@ import toast from 'react-hot-toast'
 import { Plus, Search, X, Loader2, Users, Phone, Pencil, Trash2, ShieldCheck } from 'lucide-react'
 import { ROLES, PAY_TYPES, getRoleBadge } from '../lib/constants'
 
-// ROLES and PAY_TYPES imported from constants
-
 function ConfirmDialog({ message, onConfirm, onCancel }) {
   return (
     <div className="confirm-overlay">
@@ -31,14 +29,14 @@ function validate(form) {
 }
 
 export default function PeoplePage() {
-  const [people, setPeople] = useState([])
-  const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(true)
+  const [people, setPeople]     = useState([])
+  const [search, setSearch]     = useState('')
+  const [loading, setLoading]   = useState(true)
   const [showModal, setShowModal] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [editing, setEditing] = useState(null)
+  const [saving, setSaving]     = useState(false)
+  const [editing, setEditing]   = useState(null)
   const [confirmId, setConfirmId] = useState(null)
-  const [errors, setErrors] = useState({})
+  const [errors, setErrors]     = useState({})
   const [form, setForm] = useState({ full_name: '', phone: '', role: 'staff', is_admin: false, pay_type: 'daily', pay_rate: '' })
 
   useEffect(() => { loadPeople() }, [])
@@ -53,7 +51,15 @@ export default function PeoplePage() {
   function openEdit(p) {
     setEditing(p)
     setErrors({})
-    setForm({ full_name: p.full_name, phone: p.phone || '', role: p.role, is_admin: p.is_admin, pay_type: p.pay_type || 'daily', pay_rate: p.pay_rate || '' })
+    setForm({
+      full_name: p.full_name,
+      phone:     p.phone || '',
+      role:      p.role,
+      is_admin:  p.is_admin,
+      // Fix #1: Admin has no pay type — show empty
+      pay_type:  p.role === 'admin' ? '' : (p.pay_type || 'daily'),
+      pay_rate:  p.role === 'admin' ? '' : (p.pay_rate || ''),
+    })
     setShowModal(true)
   }
 
@@ -64,19 +70,34 @@ export default function PeoplePage() {
     setShowModal(true)
   }
 
+  // Fix #1: When role changes to admin, clear pay type and rate
+  function handleRoleChange(role) {
+    setForm(f => ({
+      ...f,
+      role,
+      is_admin:  role === 'admin' ? true : f.is_admin,
+      pay_type:  role === 'admin' ? '' : (f.pay_type || 'daily'),
+      pay_rate:  role === 'admin' ? '' : f.pay_rate,
+    }))
+  }
+
   async function handleSave(e) {
     e.preventDefault()
     const errs = validate(form)
     if (Object.keys(errs).length) { setErrors(errs); return }
     setSaving(true)
-    const payload = { ...form, pay_rate: parseFloat(form.pay_rate) || 0 }
+    const payload = {
+      ...form,
+      pay_rate: form.role === 'admin' ? 0 : (parseFloat(form.pay_rate) || 0),
+      pay_type: form.role === 'admin' ? null : (form.pay_type || null),
+    }
     if (editing) {
       const { error } = await supabase.from('profiles').update(payload).eq('id', editing.id)
       setSaving(false)
       if (error) { toast.error(error.message); return }
       toast.success('Profile updated!')
     } else {
-      // Generate a new UUID for staff who don't need a login account
+      // Fix #2: Insert directly with generated UUID — no Supabase Auth required
       const newId = crypto.randomUUID()
       const { error } = await supabase.from('profiles').insert({ ...payload, id: newId })
       setSaving(false)
@@ -87,6 +108,7 @@ export default function PeoplePage() {
     loadPeople()
   }
 
+  // Fix #3: Single confirmation flow — handleDelete only called once from ConfirmDialog
   async function handleDelete(id) {
     const { error } = await supabase.from('profiles').delete().eq('id', id)
     setConfirmId(null)
@@ -100,10 +122,9 @@ export default function PeoplePage() {
     return !q || p.full_name?.toLowerCase().includes(q) || p.phone?.includes(q) || p.role?.includes(q)
   })
 
-  function roleBadge(r) { return getRoleBadge(r) }
-
   return (
     <div>
+      {/* Fix #3: ConfirmDialog renders only once, no duplicate calls */}
       {confirmId && (
         <ConfirmDialog
           message="This will remove the person from the system. This cannot be undone."
@@ -149,10 +170,15 @@ export default function PeoplePage() {
                         ? <a href={`tel:${p.phone}`} style={{ color: 'var(--blue)', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.85rem' }}><Phone size={12} />{p.phone}</a>
                         : <span style={{ color: 'var(--text-3)' }}>—</span>}
                     </td>
-                    <td><span className={`badge ${roleBadge(p.role)}`}>{p.role}</span></td>
+                    <td><span className={`badge ${getRoleBadge(p.role)}`}>{p.role}</span></td>
                     <td>{p.is_admin ? <ShieldCheck size={15} style={{ color: 'var(--gold)' }} /> : <span style={{ color: 'var(--text-3)' }}>—</span>}</td>
-                    <td style={{ color: 'var(--text-2)', fontSize: '0.85rem' }}>{p.pay_type?.replace(/_/g, ' ') || '—'}</td>
-                    <td style={{ color: 'var(--gold)', fontWeight: 600 }}>{p.pay_rate > 0 ? `₹${p.pay_rate}` : '—'}</td>
+                    {/* Fix #1: Admin shows None for pay type */}
+                    <td style={{ color: 'var(--text-2)', fontSize: '0.85rem' }}>
+                      {p.role === 'admin' ? <span style={{ color: 'var(--text-3)' }}>None</span> : (p.pay_type?.replace(/_/g, ' ') || '—')}
+                    </td>
+                    <td style={{ color: 'var(--gold)', fontWeight: 600 }}>
+                      {p.role === 'admin' ? <span style={{ color: 'var(--text-3)' }}>—</span> : (p.pay_rate > 0 ? `₹${p.pay_rate}` : '—')}
+                    </td>
                     <td>
                       <div className="row-actions">
                         <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(p)} title="Edit"><Pencil size={13} /></button>
@@ -190,25 +216,31 @@ export default function PeoplePage() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Role</label>
-                  <select className="form-select" value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
+                  {/* Fix #1: role change triggers pay type reset */}
+                  <select className="form-select" value={form.role} onChange={e => handleRoleChange(e.target.value)}>
                     {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                   </select>
                 </div>
               </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Pay Type</label>
-                  <select className="form-select" value={form.pay_type} onChange={e => setForm({...form, pay_type: e.target.value})}>
-                    {PAY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                  </select>
+
+              {/* Fix #1: Hide pay fields for admin role */}
+              {form.role !== 'admin' && (
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Pay Type</label>
+                    <select className="form-select" value={form.pay_type} onChange={e => setForm({...form, pay_type: e.target.value})}>
+                      {PAY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Rate (₹)</label>
+                    <input type="number" className="form-input" style={{ borderColor: errors.pay_rate ? 'var(--red)' : undefined }}
+                      value={form.pay_rate} onChange={e => setForm({...form, pay_rate: e.target.value})} placeholder="0" />
+                    {errors.pay_rate && <div style={{ color: 'var(--red)', fontSize: '0.78rem', marginTop: 3 }}>{errors.pay_rate}</div>}
+                  </div>
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Rate (₹)</label>
-                  <input type="number" className="form-input" style={{ borderColor: errors.pay_rate ? 'var(--red)' : undefined }}
-                    value={form.pay_rate} onChange={e => setForm({...form, pay_rate: e.target.value})} placeholder="0" />
-                  {errors.pay_rate && <div style={{ color: 'var(--red)', fontSize: '0.78rem', marginTop: 3 }}>{errors.pay_rate}</div>}
-                </div>
-              </div>
+              )}
+
               <div className="form-group">
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                   <input type="checkbox" checked={form.is_admin} onChange={e => setForm({...form, is_admin: e.target.checked})} />
