@@ -1,29 +1,35 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext({})
 
 export function AuthProvider({ children }) {
-  const [user, setUser]       = useState(null)
-  const [profile, setProfile] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser]         = useState(null)
+  const [profile, setProfile]   = useState(null)
+  const [loading, setLoading]   = useState(true)
   const [lastLogin, setLastLogin] = useState(null)
+  const isMounted = useRef(true)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    isMounted.current = true
+
+    // GAP 10 FIX: await profile fetch before marking loading=false
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!isMounted.current) return
       setUser(session?.user ?? null)
       if (session?.user) {
-        fetchProfile(session.user.id)
+        await fetchProfile(session.user.id)
         recordLastLogin(session.user)
       } else {
         setLoading(false)
       }
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!isMounted.current) return
       setUser(session?.user ?? null)
       if (session?.user) {
-        fetchProfile(session.user.id)
+        await fetchProfile(session.user.id)
         if (_event === 'SIGNED_IN') recordLastLogin(session.user)
       } else {
         setProfile(null)
@@ -32,19 +38,35 @@ export function AuthProvider({ children }) {
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      isMounted.current = false
+      subscription.unsubscribe()
+    }
   }, [])
 
   async function fetchProfile(userId) {
-    const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
-    setProfile(data)
-    setLoading(false)
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
+      if (isMounted.current) {
+        // GAP 10 FIX: set profile before clearing loading
+        setProfile(error ? null : data)
+        setLoading(false)
+      }
+    } catch {
+      if (isMounted.current) {
+        setProfile(null)
+        setLoading(false)
+      }
+    }
   }
 
   function recordLastLogin(user) {
-    // Store last login time in localStorage
-    const now = new Date().toISOString()
-    const key = `last_login_${user.id}`
+    const now  = new Date().toISOString()
+    const key  = `last_login_${user.id}`
     const prev = localStorage.getItem(key)
     setLastLogin(prev ? new Date(prev) : null)
     localStorage.setItem(key, now)

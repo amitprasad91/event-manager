@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../context/AuthContext'
+import { canDo } from '../lib/permissions'
 import toast from 'react-hot-toast'
 import { Plus, Search, X, Loader2, UserCircle, Phone, Mail, Pencil, Trash2 } from 'lucide-react'
 
@@ -28,6 +30,9 @@ export default function ClientsPage() {
   const [editing, setEditing]   = useState(null)
   const [confirmId, setConfirmId] = useState(null)
   const [form, setForm] = useState({ full_name: '', phone: '', email: '', address: '' })
+
+  const { profile } = useAuth()
+  const role = profile?.role || 'staff'
 
   useEffect(() => { loadClients() }, [])
 
@@ -68,6 +73,7 @@ export default function ClientsPage() {
 
   // Fix #4: Added delete functionality
   async function handleDelete(id) {
+    if (!canDo(role, 'delete')) { toast.error('You do not have permission to delete.'); return }
     const { error } = await supabase.from('clients').delete().eq('id', id)
     setConfirmId(null)
     if (error) { toast.error(error.message); return }
@@ -95,7 +101,7 @@ export default function ClientsPage() {
           <div className="page-title">Clients</div>
           <div className="page-subtitle">{clients.length} clients</div>
         </div>
-        <button className="btn btn-primary" onClick={openNew}><Plus size={15} /> Add Client</button>
+        {canDo(role, 'add') && <button className="btn btn-primary" onClick={openNew}><Plus size={15} /> Add Client</button>
       </div>
 
       <div className="search-bar">

@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../context/AuthContext'
+import { canDo } from '../lib/permissions'
 import toast from 'react-hot-toast'
 import { Plus, Search, X, Loader2, MapPin, Pencil, Trash2, Navigation } from 'lucide-react'
 import { openGoogleMaps } from '../lib/constants'
@@ -38,6 +40,9 @@ export default function VenuesPage() {
   const [errors, setErrors]     = useState({})
   const emptyForm = { name: '', address: '', city: 'Kolkata', google_maps_url: '', lat: '', lng: '' }
   const [form, setForm] = useState(emptyForm)
+
+  const { profile } = useAuth()
+  const role = profile?.role || 'staff'
 
   useEffect(() => { loadVenues() }, [])
 
@@ -82,6 +87,7 @@ export default function VenuesPage() {
   }
 
   async function handleDelete(id) {
+    if (!canDo(role, 'delete')) { toast.error('You do not have permission to delete.'); return }
     const { error } = await supabase.from('venues').delete().eq('id', id)
     setConfirmId(null)
     if (error) { toast.error(error.message); return }
@@ -115,7 +121,7 @@ export default function VenuesPage() {
           <div className="page-title">Venues</div>
           <div className="page-subtitle">{venues.length} venues · Tap 📍 to navigate</div>
         </div>
-        <button className="btn btn-primary" onClick={openNew}><Plus size={14} /> Add Venue</button>
+        {canDo(role, 'add') && <button className="btn btn-primary" onClick={openNew}><Plus size={14} /> Add Venue</button>
       </div>
 
       <div className="search-bar">

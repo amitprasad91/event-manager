@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../context/AuthContext'
+import { canDo } from '../lib/permissions'
 import toast from 'react-hot-toast'
 import { Plus, Search, X, Loader2, Package, Pencil, Trash2, Info } from 'lucide-react'
 import { MACHINE_CATEGORIES, MACHINE_STATUSES, DEFAULT_GODOWNS, getMachineStatus } from '../lib/constants'
@@ -58,6 +60,9 @@ export default function MachinesPage() {
   const emptyForm = { name: '', category: 'machine', godown: DEFAULT_GODOWNS[0], status: 'in_godown', current_event_id: '', notes: '', quantity: '1' }
   const [form, setForm] = useState(emptyForm)
 
+  const { profile } = useAuth()
+  const role = profile?.role || 'staff'
+
   useEffect(() => { loadAll() }, [])
 
   async function loadAll() {
@@ -106,6 +111,7 @@ export default function MachinesPage() {
   }
 
   async function handleDelete(id) {
+    if (!canDo(role, 'delete')) { toast.error('You do not have permission to delete.'); return }
     const { error } = await supabase.from('machines').delete().eq('id', id)
     setConfirmId(null)
     if (error) { toast.error(error.message); return }
@@ -136,7 +142,7 @@ export default function MachinesPage() {
           <div className="page-title">Machines & Items</div>
           <div className="page-subtitle">{machines.length} items tracked</div>
         </div>
-        <button className="btn btn-primary" onClick={openNew}><Plus size={14} /> Add Item</button>
+        {canDo(role, 'add') && <button className="btn btn-primary" onClick={openNew}><Plus size={14} /> Add Item</button>
       </div>
 
       {/* Issue #8: Godown summary cards */}

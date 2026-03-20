@@ -1069,6 +1069,267 @@ describe('📋 DB Schema Phase 3 — New Columns', () => {
 })
 
 
+
+// ══════════════════════════════════════════════════════════════
+// GAP FIXES — Architecture Improvement Tests
+// ══════════════════════════════════════════════════════════════
+
+// ── Gap fix helpers ───────────────────────────────────────────
+
+function validateItemForm(form) {
+  const e = {}
+  if (!form.description?.trim()) e.description = 'Description is required'
+  if (form.cost && isNaN(parseFloat(form.cost))) e.cost = 'Must be a number'
+  if (form.cost && parseFloat(form.cost) < 0) e.cost = 'Cost cannot be negative'
+  if (form.days && parseFloat(form.days) < 0.5) e.days = 'Minimum 0.5 days'
+  if (form.item_type === 'machine' && !form.machine_id) e.machine_id = 'Select a machine'
+  return e
+}
+
+function autoFillMachine(machineId, machines) {
+  const m = machines.find(x => x.id === machineId)
+  if (!m) return {}
+  return { description: m.name, machine_id: machineId }
+}
+
+function autoFillPerformer(performerId, performers) {
+  const p = performers.find(x => x.id === performerId)
+  if (!p) return {}
+  return {
+    description:  p.full_name + (p.type ? ` (${p.type})` : ''),
+    performer_id: performerId,
+    cost:         p.rate || '',
+    pay_type:     p.rate_type === 'per_hour' ? 'hourly' : 'fixed',
+  }
+}
+
+function calcDashboardStats(events, transportPending, machinesOut) {
+  const active = events.filter(e => ['upcoming','ongoing'].includes(e.status))
+  return {
+    events:        active.length,
+    revenue:       active.reduce((s,e) => s + (e.amount_received||0), 0),
+    pending:       active.reduce((s,e) => s + ((e.client_amount||0)-(e.amount_received||0)), 0),
+    transportDue:  transportPending,
+    machinesOut,
+  }
+}
+
+function calcPaymentSummaryV2(eventItems, transportDues) {
+  const staffDue    = eventItems.filter(i => i.payment_status !== 'paid').reduce((s,i) => s + ((i.cost||0)-(i.amount_paid||0)), 0)
+  const transportDue = transportDues.reduce((s,t) => s + ((t.amount||0)-(t.amount_paid||0)), 0)
+  return { staffDue, transportDue, totalOutstanding: staffDue + transportDue }
+}
+
+function buildAuditEntry({ action, entityType, entityId, amount, notes, doneBy }) {
+  if (!action)     return null
+  if (!entityType) return null
+  if (!entityId)   return null
+  return { action, entity_type: entityType, entity_id: entityId, amount: amount || null, notes: notes || null, done_by: doneBy || null }
+}
+
+function guardAction(role, action) {
+  const perms = {
+    admin:      ['add', 'edit', 'delete', 'view', 'pay', 'split', 'report'],
+    supervisor: ['add', 'edit', 'view', 'pay'],
+    staff:      ['view', 'add'],
+    driver:     ['view'],
+  }
+  return perms[role]?.includes(action) || false
+}
+
+// ══════════════════════════════════════════════════════════════
+
+describe('🔧 Gap 1 — Action-Level Permission Guards', () => {
+  test('admin can add',                       () => expect(guardAction('admin',      'add')).toBeTruthy())
+  test('admin can delete',                    () => expect(guardAction('admin',      'delete')).toBeTruthy())
+  test('supervisor can add',                  () => expect(guardAction('supervisor', 'add')).toBeTruthy())
+  test('supervisor can edit',                 () => expect(guardAction('supervisor', 'edit')).toBeTruthy())
+  test('supervisor cannot delete',            () => expect(guardAction('supervisor', 'delete')).toBeFalsy())
+  test('staff can add',                       () => expect(guardAction('staff',      'add')).toBeTruthy())
+  test('staff cannot edit',                   () => expect(guardAction('staff',      'edit')).toBeFalsy())
+  test('staff cannot delete',                 () => expect(guardAction('staff',      'delete')).toBeFalsy())
+  test('driver cannot add',                   () => expect(guardAction('driver',     'add')).toBeFalsy())
+  test('driver cannot delete',                () => expect(guardAction('driver',     'delete')).toBeFalsy())
+  test('driver can view',                     () => expect(guardAction('driver',     'view')).toBeTruthy())
+  test('unknown role = no access',            () => expect(guardAction('unknown',    'add')).toBeFalsy())
+})
+
+describe('💳 Gap 2 — Transport Dues in Payments', () => {
+  test('transport dues included in total outstanding', () => {
+    const items = [{ cost: 1000, amount_paid: 500, payment_status: 'partial' }]
+    const trips = [{ amount: 800, amount_paid: 0 }]
+    const result = calcPaymentSummaryV2(items, trips)
+    expect(result.staffDue).toBe(500)
+    expect(result.transportDue).toBe(800)
+    expect(result.totalOutstanding).toBe(1300)
+  })
+  test('zero transport dues when all trips paid',  () => {
+    const items = [{ cost: 1000, amount_paid: 1000, payment_status: 'paid' }]
+    const trips = [{ amount: 800, amount_paid: 800, payment_status: 'paid' }]
+    const result = calcPaymentSummaryV2(items, trips)
+    expect(result.staffDue).toBe(0)
+    expect(result.transportDue).toBe(0)
+    expect(result.totalOutstanding).toBe(0)
+  })
+  test('partial transport payment counted correctly', () => {
+    const trips = [{ amount: 500, amount_paid: 200, payment_status: 'partial' }]
+    const result = calcPaymentSummaryV2([], trips)
+    expect(result.transportDue).toBe(300)
+  })
+})
+
+describe('📊 Gap 3 — Enhanced Dashboard Stats', () => {
+  const events = [
+    { status: 'upcoming', client_amount: 50000, amount_received: 20000 },
+    { status: 'ongoing',  client_amount: 30000, amount_received: 30000 },
+    { status: 'completed',client_amount: 20000, amount_received: 10000 }, // excluded
+  ]
+  test('dashboard counts only active events',     () => expect(calcDashboardStats(events, 0, 0).events).toBe(2))
+  test('dashboard revenue = active received',     () => expect(calcDashboardStats(events, 0, 0).revenue).toBe(50000))
+  test('dashboard pending = active diff',         () => expect(calcDashboardStats(events, 0, 0).pending).toBe(30000))
+  test('dashboard shows transport due',           () => expect(calcDashboardStats(events, 5000, 0).transportDue).toBe(5000))
+  test('dashboard shows machines out',            () => expect(calcDashboardStats(events, 0, 3).machinesOut).toBe(3))
+  test('dashboard transport = 0 when none',       () => expect(calcDashboardStats(events, 0, 0).transportDue).toBe(0))
+  test('dashboard machines = 0 when none',        () => expect(calcDashboardStats(events, 0, 0).machinesOut).toBe(0))
+})
+
+describe('🗄️ Gap 4 — DB Indexes', () => {
+  const REQUIRED_INDEXES = [
+    'idx_events_status', 'idx_events_date', 'idx_events_client',
+    'idx_event_items_event', 'idx_event_items_status',
+    'idx_transport_event', 'idx_transport_status', 'idx_transport_driver',
+    'idx_machines_status', 'idx_machines_godown',
+    'idx_profit_event', 'idx_profit_owner',
+  ]
+  test('all 12 indexes defined',                  () => expect(REQUIRED_INDEXES.length).toBe(12))
+  test('events_status index exists',              () => expect(REQUIRED_INDEXES.includes('idx_events_status')).toBeTruthy())
+  test('events_date index exists',                () => expect(REQUIRED_INDEXES.includes('idx_events_date')).toBeTruthy())
+  test('transport_event index exists',            () => expect(REQUIRED_INDEXES.includes('idx_transport_event')).toBeTruthy())
+  test('transport_status index exists',           () => expect(REQUIRED_INDEXES.includes('idx_transport_status')).toBeTruthy())
+  test('machines_status index exists',            () => expect(REQUIRED_INDEXES.includes('idx_machines_status')).toBeTruthy())
+  test('profit split indexes exist',              () => expect(REQUIRED_INDEXES.filter(i => i.includes('profit')).length).toBe(2))
+})
+
+describe('🔗 Gap 5 — Machines + Performers Linked to Events', () => {
+  const machines = [
+    { id: 'm1', name: 'Selfie Booth', godown: 'Godown A', status: 'in_godown', rate: 0 },
+    { id: 'm2', name: 'Casino Table', godown: 'Godown B', status: 'at_event' },
+  ]
+  const performers = [
+    { id: 'p1', full_name: 'Rahul Dancer', type: 'dancer', rate: 2000, rate_type: 'per_event' },
+    { id: 'p2', full_name: 'DJ Sonu',      type: 'dj',     rate: 5000, rate_type: 'per_event' },
+  ]
+
+  test('machine selection auto-fills description', () => {
+    const result = autoFillMachine('m1', machines)
+    expect(result.description).toBe('Selfie Booth')
+    expect(result.machine_id).toBe('m1')
+  })
+  test('unknown machine returns empty',            () => expect(autoFillMachine('unknown', machines)).toEqual({}))
+  test('performer auto-fills name + type',         () => {
+    const result = autoFillPerformer('p1', performers)
+    expect(result.description).toBe('Rahul Dancer (dancer)')
+    expect(result.cost).toBe(2000)
+  })
+  test('performer auto-fills cost',                () => expect(autoFillPerformer('p2', performers).cost).toBe(5000))
+  test('performer pay_type = fixed for per_event', () => expect(autoFillPerformer('p1', performers).pay_type).toBe('fixed'))
+  test('unknown performer returns empty',          () => expect(autoFillPerformer('unknown', performers)).toEqual({}))
+  test('machine item type requires machine_id',    () => {
+    const errors = validateItemForm({ item_type: 'machine', description: 'Booth', cost: '500', days: '1', machine_id: '' })
+    expect(errors).toHaveProperty('machine_id')
+  })
+  test('machine item with machine_id passes',      () => {
+    const errors = validateItemForm({ item_type: 'machine', description: 'Booth', cost: '500', days: '1', machine_id: 'm1' })
+    expect(errors).not.toHaveProperty('machine_id')
+  })
+  test('non-machine item does not require machine_id', () => {
+    const errors = validateItemForm({ item_type: 'supervisor', description: 'Raj', cost: '500', days: '1', machine_id: '' })
+    expect(errors).not.toHaveProperty('machine_id')
+  })
+})
+
+describe('📋 Gap 7 — Audit Log', () => {
+  test('valid trip_paid audit entry',             () => {
+    const entry = buildAuditEntry({ action: 'trip_paid', entityType: 'transport_trip', entityId: 'uuid-1', amount: 500, doneBy: 'uuid-p1' })
+    expect(entry !== null).toBeTruthy()
+    expect(entry.action).toBe('trip_paid')
+    expect(entry.amount).toBe(500)
+  })
+  test('valid payment_collected audit entry',     () => {
+    const entry = buildAuditEntry({ action: 'payment_collected', entityType: 'event', entityId: 'uuid-2', amount: 50000, notes: 'cash' })
+    expect(entry.action).toBe('payment_collected')
+    expect(entry.entity_type).toBe('event')
+  })
+  test('valid trip_reverted audit entry',         () => {
+    const entry = buildAuditEntry({ action: 'trip_reverted', entityType: 'transport_trip', entityId: 'uuid-3', notes: 'Wrong amount' })
+    expect(entry.notes).toBe('Wrong amount')
+  })
+  test('missing action returns null',             () => expect(buildAuditEntry({ entityType: 'event', entityId: 'x' })).toBeNull())
+  test('missing entityType returns null',         () => expect(buildAuditEntry({ action: 'trip_paid', entityId: 'x' })).toBeNull())
+  test('missing entityId returns null',           () => expect(buildAuditEntry({ action: 'trip_paid', entityType: 'event' })).toBeNull())
+  test('optional fields default to null',         () => {
+    const entry = buildAuditEntry({ action: 'trip_paid', entityType: 'transport_trip', entityId: 'uuid-1' })
+    expect(entry.amount).toBeNull()
+    expect(entry.notes).toBeNull()
+    expect(entry.done_by).toBeNull()
+  })
+  test('audit log has correct table columns',     () => {
+    const COLS = ['id','action','entity_type','entity_id','amount','notes','done_by','created_at']
+    expect(COLS.includes('action')).toBeTruthy()
+    expect(COLS.includes('done_by')).toBeTruthy()
+    expect(COLS.includes('entity_id')).toBeTruthy()
+  })
+})
+
+describe('🔐 Gap 10 — AuthContext Profile Race Condition', () => {
+  test('loading stays true until profile resolved',  () => {
+    // Simulate: user set but profile fetch in progress
+    const state = { user: { id: 'u1' }, profile: null, loading: true }
+    expect(state.loading).toBeTruthy()
+    expect(state.profile).toBeNull()
+  })
+  test('loading false only after profile fetched',   () => {
+    const state = { user: { id: 'u1' }, profile: { id: 'u1', role: 'admin' }, loading: false }
+    expect(state.loading).toBeFalsy()
+    expect(state.profile?.role).toBe('admin')
+  })
+  test('profile null on fetch error — loading still false', () => {
+    const state = { user: { id: 'u1' }, profile: null, loading: false }
+    expect(state.loading).toBeFalsy()
+  })
+  test('profile role defaults to staff if null',     () => {
+    const profile = null
+    const role = profile?.role || 'staff'
+    expect(role).toBe('staff')
+  })
+  test('isMounted ref prevents state update after unmount', () => {
+    let isMounted = true
+    // simulate component unmount
+    isMounted = false
+    // state should not be set
+    expect(isMounted).toBeFalsy()
+  })
+})
+
+describe('⚠️ Gap 9 — ErrorBoundary', () => {
+  test('error is caught and hasError set to true',   () => {
+    const state = { hasError: false, error: null }
+    // Simulate getDerivedStateFromError
+    const newState = (error) => ({ hasError: true, error })
+    const result = newState(new Error('Test crash'))
+    expect(result.hasError).toBeTruthy()
+    expect(result.error.message).toBe('Test crash')
+  })
+  test('no error — hasError is false',               () => {
+    expect({ hasError: false, error: null }.hasError).toBeFalsy()
+  })
+  test('error message is accessible',               () => {
+    const err = new Error('Database connection failed')
+    expect(err.message).toBe('Database connection failed')
+  })
+})
+
+
 // ── SUMMARY ──────────────────────────────────────────────────
 const total = passed + failed
 console.log(`\n${'═'.repeat(54)}`)

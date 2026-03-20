@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../context/AuthContext'
+import { canDo } from '../lib/permissions'
 import toast from 'react-hot-toast'
 import { Plus, Search, X, Loader2, Mic2, Phone, Pencil, Trash2 } from 'lucide-react'
 import { PERFORMER_TYPES, VENDOR_TYPES, PERFORMER_RATE_TYPES, formatTel } from '../lib/constants'
@@ -42,6 +44,9 @@ export default function PerformersPage() {
   const [errors, setErrors]         = useState({})
   const emptyForm = { full_name: '', phone: '', type: PERFORMER_TYPES[0].value, vendor_type: 'freelancer', rate: '', rate_type: 'per_event' }
   const [form, setForm] = useState(emptyForm)
+
+  const { profile } = useAuth()
+  const role = profile?.role || 'staff'
 
   useEffect(() => { loadPerformers() }, [])
 
@@ -86,6 +91,7 @@ export default function PerformersPage() {
   }
 
   async function handleDelete(id) {
+    if (!canDo(role, 'delete')) { toast.error('You do not have permission to delete.'); return }
     const { error } = await supabase.from('performers').delete().eq('id', id)
     setConfirmId(null)
     if (error) { toast.error(error.message); return }
@@ -111,7 +117,7 @@ export default function PerformersPage() {
           <div className="page-title">Performers & Artists</div>
           <div className="page-subtitle">{performers.length} in directory</div>
         </div>
-        <button className="btn btn-primary" onClick={openNew}><Plus size={14} /> Add Performer</button>
+        {canDo(role, 'add') && <button className="btn btn-primary" onClick={openNew}><Plus size={14} /> Add Performer</button>
       </div>
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>

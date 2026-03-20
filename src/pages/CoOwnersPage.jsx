@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../context/AuthContext'
+import { canDo } from '../lib/permissions'
 import toast from 'react-hot-toast'
 import { Plus, Search, X, Loader2, Users2, Phone, Mail, Pencil, Trash2 } from 'lucide-react'
 import { fmtRs, SPLIT_METHODS, formatTel } from '../lib/constants'
@@ -40,6 +42,9 @@ export default function CoOwnersPage() {
   const [errors, setErrors]         = useState({})
   const emptyForm = { full_name: '', phone: '', email: '' }
   const [form, setForm] = useState(emptyForm)
+
+  const { profile } = useAuth()
+  const role = profile?.role || 'staff'
 
   useEffect(() => { loadAll() }, [])
 
@@ -95,6 +100,7 @@ export default function CoOwnersPage() {
   }
 
   async function handleDelete(id) {
+    if (!canDo(role, 'delete')) { toast.error('You do not have permission to delete.'); return }
     const { error } = await supabase.from('co_owners').delete().eq('id', id)
     setConfirmId(null)
     if (error) { toast.error(error.message); return }
@@ -118,7 +124,7 @@ export default function CoOwnersPage() {
           <div className="page-title">Co-Owners</div>
           <div className="page-subtitle">{owners.length} partners · Total pool {fmtRs(totalPool)}</div>
         </div>
-        <button className="btn btn-primary" onClick={openNew}><Plus size={14} /> Add Co-owner</button>
+        {canDo(role, 'add') && <button className="btn btn-primary" onClick={openNew}><Plus size={14} /> Add Co-owner</button>
       </div>
 
       <div className="search-bar">

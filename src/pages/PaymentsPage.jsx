@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
-import { Loader2, CheckCircle, Phone, Wallet, User, CreditCard, Calendar } from 'lucide-react'
+import { Loader2, CheckCircle, Phone, Wallet, User, CreditCard, Calendar, X } from 'lucide-react'
+import { logAudit } from '../lib/audit'
 import { COLORS, fmtRs, calcProgress, calcStaffDue, getItemTypeEmoji } from '../lib/constants'
 import { format, isThisQuarter } from 'date-fns'
 
@@ -47,6 +48,7 @@ export default function PaymentsPage() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('collect')
   const [updatingId, setUpdatingId] = useState(null)
+  const [transportDues, setTransportDues] = useState([])
   const [profiles, setProfiles] = useState([])
   const [showPayModal, setShowPayModal] = useState(false)
   const [payEvent, setPayEvent] = useState(null)
@@ -56,7 +58,7 @@ export default function PaymentsPage() {
 
   async function loadAll() {
     setLoading(true)
-    const [itemsRes, evRes, profRes] = await Promise.all([
+    const [itemsRes, evRes, profRes, tripRes] = await Promise.all([
       supabase.from('event_items')
         .select('*,events(title,event_date,client_amount,amount_received,clients(full_name,phone))')
         .order('created_at', { ascending: false }),
@@ -64,10 +66,12 @@ export default function PaymentsPage() {
         .select('id,title,event_date,client_amount,amount_received,status,collection_method,collected_by_profile_id,collected_at,handed_to_profile_id,handed_at,clients(full_name,phone)')
         .order('event_date', { ascending: false }),
       supabase.from('profiles').select('id,full_name').order('full_name'),
+      supabase.from('transport_trips').select('id,amount,amount_paid,payment_status').eq('payment_status','pending'),
     ])
     setEventItems(itemsRes.data || [])
     setEvents(evRes.data || [])
     setProfiles(profRes.data || [])
+    setTransportDues(tripRes.data || [])
     setLoading(false)
   }
 
@@ -108,6 +112,7 @@ export default function PaymentsPage() {
     }).eq('id', eventId)
     setUpdatingId(null)
     if (error) { toast.error(error.message); return }
+    await logAudit({ action: 'payment_collected', entityType: 'event', entityId: eventId, amount: val, notes: payForm.method, doneBy: payForm.collected_by || null })
     toast.success('Payment recorded!')
     setShowPayModal(false)
     setPayEvent(null)
@@ -118,7 +123,9 @@ export default function PaymentsPage() {
   const totalRevenue   = qEvents.reduce((s,e) => s + (e.client_amount   || 0), 0)
   const totalCollected = qEvents.reduce((s,e) => s + (e.amount_received  || 0), 0)
   const totalPending   = totalRevenue - totalCollected
-  const totalStaffDue  = eventItems.filter(i => i.payment_status !== 'paid').reduce((s,i) => s + ((i.cost||0)-(i.amount_paid||0)), 0)
+  const totalStaffDue     = eventItems.filter(i => i.payment_status !== 'paid').reduce((s,i) => s + ((i.cost||0)-(i.amount_paid||0)), 0)
+  const totalTransportDue = transportDues.reduce((s,t) => s + ((t.amount||0)-(t.amount_paid||0)), 0)
+  const totalOutstanding  = totalStaffDue + totalTransportDue
 
   const unpaidItems = eventItems.filter(i => i.payment_status !== 'paid')
 
@@ -133,11 +140,12 @@ export default function PaymentsPage() {
       </div>
 
       {/* Summary stats — 2x2 grid with colored cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(140px,1fr))', gap: 10, marginBottom: 24 }}>
         <PayStat label="Total Billed"       icon="💼" value={fmtRs(totalRevenue)}   color="gold"  sub="This quarter" />
         <PayStat label="Collected"          icon="✅" value={fmtRs(totalCollected)} color="green" sub="From clients" />
         <PayStat label="Pending Collection" icon="⏳" value={fmtRs(totalPending)}   color="red"   sub="Outstanding" />
-        <PayStat label="Staff Dues"         icon="👷" value={fmtRs(totalStaffDue)}  color="blue"  sub="To pay out" />
+        <PayStat label="Staff Dues"         icon="👷" value={fmtRs(totalStaffDue)}   color="blue"  sub="Event items" />
+        <PayStat label="Transport Dues"      icon="🚛" value={fmtRs(totalTransportDue)} color="red"   sub="Driver payments" />
       </div>
 
       {/* Tab switcher — pill style */}

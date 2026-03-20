@@ -5,6 +5,7 @@ import { Plus, Search, X, Loader2, Truck, Phone, Pencil, Trash2, CheckCircle, Ma
 import { VEHICLE_TYPES, TRANSPORT_PAY_METHODS, TRIP_STATUSES, DEFAULT_GODOWNS, fmtRs, formatTel, openGoogleMaps } from '../lib/constants'
 import { format } from 'date-fns'
 import { useAuth } from '../context/AuthContext'
+import { logAudit } from '../lib/audit'
 
 // Issue #11: Pay confirmation dialog
 function PayConfirmDialog({ trip, onConfirm, onCancel }) {
@@ -259,6 +260,7 @@ export default function TransportPage() {
     }).eq('id', tripId)
     setPayTrip(null)
     if (error) { toast.error(error.message); return }
+    await logAudit({ action: 'trip_paid', entityType: 'transport_trip', entityId: tripId, amount: trips.find(t=>t.id===tripId)?.amount, doneBy: paidByProfileId })
     toast.success('Payment confirmed!')
     loadAll()
   }
@@ -277,6 +279,7 @@ export default function TransportPage() {
     }).eq('id', tripId)
     setRevertTrip(null)
     if (error) { toast.error(error.message); return }
+    await logAudit({ action: 'trip_reverted', entityType: 'transport_trip', entityId: tripId, notes: reason, doneBy: revertedByProfileId })
     toast.success('Payment reverted!')
     loadAll()
   }

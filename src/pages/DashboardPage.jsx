@@ -69,7 +69,7 @@ function StatCard({ label, value, sub, color, icon, prefix = '' }) {
 export default function DashboardPage() {
   const { profile, lastLogin } = useAuth()
   const navigate = useNavigate()
-  const [stats, setStats] = useState({ events: 0, people: 0, revenue: 0, pending: 0 })
+  const [stats, setStats] = useState({ events: 0, people: 0, revenue: 0, pending: 0, transportDue: 0, machinesOut: 0 })
   const [upcoming, setUpcoming] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -77,21 +77,26 @@ export default function DashboardPage() {
 
   async function loadDashboard() {
     setLoading(true)
-    const [eventsRes, peopleRes, upcomingRes] = await Promise.all([
-      supabase.from('events').select('id,client_amount,amount_received,status').eq('status','upcoming'),
+    const [eventsRes, peopleRes, upcomingRes, transportRes, machinesRes] = await Promise.all([
+      supabase.from('events').select('id,client_amount,amount_received,status').in('status',['upcoming','ongoing']),
       supabase.from('profiles').select('id', { count: 'exact' }),
       supabase.from('events')
         .select('*,clients(full_name,phone),venues(name,address,google_maps_url)')
         .in('status', ['upcoming','ongoing'])
         .order('event_date', { ascending: true })
-        .limit(6)
+        .limit(6),
+      supabase.from('transport_trips').select('id,amount,payment_status').eq('payment_status','pending'),
+      supabase.from('machines').select('id,status').eq('status','at_event'),
     ])
     const evs = eventsRes.data || []
+    const transportDue = (transportRes.data || []).reduce((s,t) => s + (t.amount || 0), 0)
     setStats({
-      events:  evs.length,
-      people:  peopleRes.count || 0,
-      revenue: evs.reduce((s,e) => s + (e.amount_received || 0), 0),
-      pending: evs.reduce((s,e) => s + ((e.client_amount||0)-(e.amount_received||0)), 0),
+      events:        evs.length,
+      people:        peopleRes.count || 0,
+      revenue:       evs.reduce((s,e) => s + (e.amount_received || 0), 0),
+      pending:       evs.reduce((s,e) => s + ((e.client_amount||0)-(e.amount_received||0)), 0),
+      transportDue,
+      machinesOut:   (machinesRes.data || []).length,
     })
     setUpcoming(upcomingRes.data || [])
     setLoading(false)
@@ -173,6 +178,16 @@ export default function DashboardPage() {
           label="Team Members" icon="👥"
           value={loading ? '—' : fmt(stats.people)}
           sub="Staff & drivers" color="blue"
+        />
+        <StatCard
+          label="Transport Dues" icon="🚛"
+          value={loading ? '—' : fmtRs(stats.transportDue)}
+          sub="Pending payments" color="red"
+        />
+        <StatCard
+          label="Machines Out" icon="📦"
+          value={loading ? '—' : fmt(stats.machinesOut)}
+          sub="Deployed at events" color="gold"
         />
       </div>
 

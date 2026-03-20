@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../context/AuthContext'
+import { canDo } from '../lib/permissions'
 import toast from 'react-hot-toast'
 import { Plus, Search, X, Loader2, CalendarDays, MapPin, Pencil, Trash2, ChevronLeft, ChevronRight, List } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isSameDay, parseISO } from 'date-fns'
@@ -45,6 +47,9 @@ export default function EventsPage() {
     end_time: '', client_amount: '', notes: '', status: EVENT_STATUSES[0].value
   }
   const [form, setForm] = useState(emptyForm)
+
+  const { profile } = useAuth()
+  const role = profile?.role || 'staff'
 
   useEffect(() => { loadAll() }, [])
 
@@ -103,6 +108,7 @@ export default function EventsPage() {
   }
 
   async function handleDelete(id) {
+    if (!canDo(role, 'delete')) { toast.error('You do not have permission to delete.'); return }
     const { error } = await supabase.from('events').delete().eq('id', id)
     setConfirmId(null)
     if (error) { toast.error(error.message); return }
@@ -266,7 +272,7 @@ export default function EventsPage() {
               display: 'flex', alignItems: 'center', gap: 5,
             }}><CalendarDays size={13} /> Calendar</button>
           </div>
-          <button className="btn btn-primary" onClick={openNew}><Plus size={15} /> New Event</button>
+          {canDo(role, 'add') && <button className="btn btn-primary" onClick={openNew}><Plus size={15} /> New Event</button>
         </div>
       </div>
 

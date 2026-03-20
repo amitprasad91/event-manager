@@ -3,10 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 import { ArrowLeft, Plus, X, Loader2, MapPin, Phone, Trash2, CheckCircle } from 'lucide-react'
+import { ITEM_TYPES, ITEM_PAY_TYPES, EVENT_STATUSES, getEventStatusBadge, getItemTypeEmoji } from '../lib/constants'
 import { format } from 'date-fns'
 
-const ITEM_TYPES = ['machine', 'performer', 'supervisor', 'helper', 'transport', 'other']
-const PAY_TYPES = ['fixed', 'daily', 'hourly', 'per_km', 'monthly']
+// ITEM_TYPES and ITEM_PAY_TYPES imported from constants
 
 export default function EventDetailPage() {
   const { id } = useParams()
@@ -14,23 +14,29 @@ export default function EventDetailPage() {
   const [event, setEvent] = useState(null)
   const [items, setItems] = useState([])
   const [profiles, setProfiles] = useState([])
+  const [machines, setMachines] = useState([])
+  const [performers, setPerformers] = useState([])
   const [loading, setLoading] = useState(true)
   const [showItemModal, setShowItemModal] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [itemForm, setItemForm] = useState({ item_type: 'supervisor', description: '', assigned_profile_id: '', cost: '', pay_type: 'fixed', days: '1', hours: '', notes: '' })
+  const [itemForm, setItemForm] = useState({ item_type: ITEM_TYPES[2].value, description: '', assigned_profile_id: '', machine_id: '', performer_id: '', cost: '', pay_type: 'fixed', days: '1', hours: '', notes: '' })
 
   useEffect(() => { loadAll() }, [id])
 
   async function loadAll() {
     setLoading(true)
-    const [evRes, itemsRes, profilesRes] = await Promise.all([
+    const [evRes, itemsRes, profilesRes, machinesRes, performersRes] = await Promise.all([
       supabase.from('events').select('*, clients(full_name, phone), venues(name, address, google_maps_url)').eq('id', id).single(),
-      supabase.from('event_items').select('*, profiles(full_name, phone)').eq('event_id', id).order('created_at'),
+      supabase.from('event_items').select('*, profiles(full_name, phone), machines(name), performers(full_name)').eq('event_id', id).order('created_at'),
       supabase.from('profiles').select('id, full_name, role, pay_rate, pay_type').order('full_name'),
+      supabase.from('machines').select('id, name, category, status, godown').in('status', ['in_godown','at_event']).order('name'),
+      supabase.from('performers').select('id, full_name, type, rate, rate_type').order('full_name'),
     ])
     setEvent(evRes.data)
     setItems(itemsRes.data || [])
     setProfiles(profilesRes.data || [])
+    setMachines(machinesRes.data || [])
+    setPerformers(performersRes.data || [])
     setLoading(false)
   }
 
@@ -55,18 +61,33 @@ export default function EventDetailPage() {
       payment_status: 'pending',
     }
     if (itemForm.assigned_profile_id) payload.assigned_profile_id = itemForm.assigned_profile_id
+    if (itemForm.machine_id)  payload.machine_id  = itemForm.machine_id
+    if (itemForm.performer_id) payload.performer_id = itemForm.performer_id
     const { error } = await supabase.from('event_items').insert(payload)
+    if (!error && itemForm.machine_id) {
+      // GAP 5: Auto-update machine status to 'at_event'
+      await supabase.from('machines')
+        .update({ status: 'at_event', current_event_id: id })
+        .eq('id', itemForm.machine_id)
+    }
     setSaving(false)
     if (error) { toast.error(error.message); return }
     toast.success('Item added!')
     setShowItemModal(false)
-    setItemForm({ item_type: 'supervisor', description: '', assigned_profile_id: '', cost: '', pay_type: 'fixed', days: '1', hours: '', notes: '' })
+    setItemForm({ item_type: ITEM_TYPES[2].value, description: '', assigned_profile_id: '', machine_id: '', performer_id: '', cost: '', pay_type: 'fixed', days: '1', hours: '', notes: '' })
     loadAll()
   }
 
   async function deleteItem(itemId) {
     if (!confirm('Remove this item?')) return
+    // GAP 5: Revert machine status if a machine item is removed
+    const item = items.find(i => i.id === itemId)
     const { error } = await supabase.from('event_items').delete().eq('id', itemId)
+    if (!error && item?.machine_id) {
+      await supabase.from('machines')
+        .update({ status: 'returned', current_event_id: null })
+        .eq('id', item.machine_id)
+    }
     if (error) { toast.error(error.message); return }
     toast.success('Removed!')
     loadAll()
@@ -93,7 +114,7 @@ export default function EventDetailPage() {
   const totalPaid = items.reduce((s, i) => s + (i.amount_paid || 0), 0)
   const profit = (event.client_amount || 0) - totalCost
 
-  const STATUS_COLORS = { upcoming: 'badge-blue', ongoing: 'badge-green', completed: 'badge-gray', cancelled: 'badge-red' }
+  // STATUS_COLORS from constants
 
   return (
     <div>
@@ -106,7 +127,7 @@ export default function EventDetailPage() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <div className="page-title">{event.title}</div>
-              <span className={`badge ${STATUS_COLORS[event.status]}`}>{event.status}</span>
+              <span className={`badge ${getEventStatusBadge(event.status)}`}>{event.status}</span>
             </div>
             <div style={{ display: 'flex', gap: 16, marginTop: 6, flexWrap: 'wrap', color: 'var(--text-3)', fontSize: '0.875rem' }}>
               <span>📅 {format(new Date(event.event_date), 'dd MMM yyyy')}</span>
@@ -229,8 +250,8 @@ export default function EventDetailPage() {
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Item Type</label>
-                  <select className="form-select" value={itemForm.item_type} onChange={e => setItemForm({...itemForm, item_type: e.target.value})}>
-                    {ITEM_TYPES.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+                  <select className="form-select" value={itemForm.item_type} onChange={e => setItemForm({...itemForm, item_type: e.target.value, machine_id: '', performer_id: ''})}>
+                    {ITEM_TYPES.map(t => <option key={t.value} value={t.value}>{t.emoji} {t.label}</option>)}
                   </select>
                 </div>
                 <div className="form-group">
@@ -241,6 +262,58 @@ export default function EventDetailPage() {
                   </select>
                 </div>
               </div>
+
+              {/* GAP 5: Machine selector — shown when item_type = machine */}
+              {itemForm.item_type === 'machine' && (
+                <div className="form-group">
+                  <label className="form-label">Select Machine from Godown</label>
+                  <select className="form-select" value={itemForm.machine_id}
+                    onChange={e => {
+                      const m = machines.find(x => x.id === e.target.value)
+                      setItemForm(f => ({
+                        ...f,
+                        machine_id:  e.target.value,
+                        description: m ? m.name : f.description,
+                      }))
+                    }}>
+                    <option value="">— Select machine —</option>
+                    {machines.map(m => (
+                      <option key={m.id} value={m.id}>
+                        {m.name} · {m.godown} · {m.status === 'at_event' ? '🎪 At Event' : '📦 In Godown'}
+                      </option>
+                    ))}
+                  </select>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-3)', marginTop: 4 }}>
+                    Selecting a machine will auto-update its status to "At Event"
+                  </div>
+                </div>
+              )}
+
+              {/* GAP 5: Performer selector — shown when item_type = performer */}
+              {itemForm.item_type === 'performer' && (
+                <div className="form-group">
+                  <label className="form-label">Select Performer</label>
+                  <select className="form-select" value={itemForm.performer_id}
+                    onChange={e => {
+                      const p = performers.find(x => x.id === e.target.value)
+                      setItemForm(f => ({
+                        ...f,
+                        performer_id: e.target.value,
+                        description:  p ? p.full_name + (p.type ? ` (${p.type})` : '') : f.description,
+                        cost:         p?.rate || f.cost,
+                        pay_type:     p?.rate_type === 'per_hour' ? 'hourly' : 'fixed',
+                      }))
+                    }}>
+                    <option value="">— Select performer —</option>
+                    {performers.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.full_name} · {p.type} · ₹{p.rate}/{p.rate_type?.replace('per_','')}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div className="form-group">
                 <label className="form-label">Description *</label>
                 <input className="form-input" value={itemForm.description} onChange={e => setItemForm({...itemForm, description: e.target.value})}
@@ -250,7 +323,7 @@ export default function EventDetailPage() {
                 <div className="form-group">
                   <label className="form-label">Pay Type</label>
                   <select className="form-select" value={itemForm.pay_type} onChange={e => setItemForm({...itemForm, pay_type: e.target.value})}>
-                    {PAY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                    {ITEM_PAY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
                 </div>
                 <div className="form-group">
