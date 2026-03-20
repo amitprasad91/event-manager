@@ -208,20 +208,24 @@ export default function PaymentsPage() {
       ) : tab === 'collect' ? (
         /* ── COLLECT FROM CLIENTS ── */
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {(() => {
-            const filteredEvs = qEvents.filter(ev => {
-              if (!search) return true
-              const q = search.toLowerCase()
-              return ev.title?.toLowerCase().includes(q) || ev.clients?.full_name?.toLowerCase().includes(q)
-            })
-            return filteredEvs.length === 0 ? (
-            <div className="empty-state"><Wallet size={40} className="empty-state-icon" /><h3>No events yet</h3></div>
-          ) : filteredEvs.map(ev => {
-            const billed   = ev.client_amount    || 0
-            const received = ev.amount_received  || 0
+          {qEvents.filter(ev => {
+            if (!search) return true
+            const q = search.toLowerCase()
+            return ev.title?.toLowerCase().includes(q) || ev.clients?.full_name?.toLowerCase().includes(q)
+          }).length === 0 ? (
+            <div className="empty-state"><Wallet size={40} className="empty-state-icon" /><h3>No events found</h3></div>
+          ) : qEvents.filter(ev => {
+            if (!search) return true
+            const q = search.toLowerCase()
+            return ev.title?.toLowerCase().includes(q) || ev.clients?.full_name?.toLowerCase().includes(q)
+          }).map(ev => {
+            const billed   = ev.client_amount   || 0
+            const received = ev.amount_received || 0
             const pending  = billed - received
             const pct      = calcProgress(received, billed)
-
+            const daysPending = ev.status === 'completed' && pending > 0
+              ? Math.max(0, Math.floor((new Date() - new Date(ev.event_date)) / (1000*60*60*24)))
+              : 0
             return (
               <div key={ev.id} style={{
                 background: 'var(--bg-2)', border: '1px solid var(--border)',
@@ -246,60 +250,44 @@ export default function PaymentsPage() {
                     </div>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{
-                      fontSize: '1.1rem', fontWeight: 800, color: COLORS.gold.hex,
-                      fontFamily: '"DM Mono","Courier New",monospace',
-                    }}>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: COLORS.gold.hex, fontFamily: '"DM Mono","Courier New",monospace' }}>
                       {fmtRs(billed)}
                     </div>
                     <div style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>Total billed</div>
                   </div>
                 </div>
-
                 {/* Progress bar */}
                 <div style={{ marginBottom: 12 }}>
-                  <div style={{
-                    height: 5, background: 'var(--bg-4)',
-                    borderRadius: 100, overflow: 'hidden',
-                  }}>
+                  <div style={{ height: 5, background: 'var(--bg-4)', borderRadius: 100, overflow: 'hidden' }}>
                     <div style={{
                       height: '100%', width: `${pct}%`,
-                      background: pct === 100
-                        ? 'linear-gradient(90deg, #10d4a0, #00e5cc)'
-                        : 'linear-gradient(90deg, #f0b429, #ff8c42)',
-                      borderRadius: 100,
-                      transition: 'width 0.4s ease',
+                      background: pct === 100 ? 'linear-gradient(90deg,#10d4a0,#00e5cc)' : 'linear-gradient(90deg,#f0b429,#ff8c42)',
+                      borderRadius: 100, transition: 'width 0.4s ease',
                     }} />
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5 }}>
-                    <span style={{ fontSize: '0.65rem', color: 'var(--green)' }}>
-                      {fmtRs(received)} collected
-                    </span>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--green)' }}>{fmtRs(received)} collected</span>
                     <span style={{ fontSize: '0.65rem', color: pending > 0 ? 'var(--red)' : 'var(--green)' }}>
                       {pending > 0 ? `${fmtRs(pending)} pending` : '✓ Fully paid'}
                     </span>
                   </div>
                 </div>
-
-                {/* Issue #14: Payment collection details */}
+                {/* Collection details */}
                 {ev.collected_at && (
                   <div style={{ fontSize: '0.72rem', color: 'var(--text-3)', marginBottom: 8, background: 'var(--bg-3)', borderRadius: 8, padding: '6px 10px' }}>
                     <span style={{ marginRight: 8 }}>
                       {ev.collection_method === 'cash' ? '💵' : ev.collection_method === 'online' ? '📱' : '🏦'} {ev.collection_method}
                     </span>
-                    {ev.collected_at && <span style={{ marginRight: 8 }}>· {format(new Date(ev.collected_at), 'dd MMM, hh:mm a')}</span>}
+                    <span style={{ marginRight: 8 }}>· {format(new Date(ev.collected_at), 'dd MMM, hh:mm a')}</span>
                     {ev.handed_at && <span>· Handed over {format(new Date(ev.handed_at), 'dd MMM')}</span>}
                   </div>
                 )}
-                {/* Issue #14: Days pending after event completion */}
-                {ev.status === 'completed' && pending > 0 && (() => {
-                  const days = Math.floor((new Date() - new Date(ev.event_date)) / (1000*60*60*24))
-                  return days > 0 ? (
-                    <div style={{ fontSize: '0.72rem', color: days > 7 ? 'var(--red)' : 'var(--orange)', marginBottom: 8, fontWeight: 600 }}>
-                      ⚠️ Payment pending for {days} day{days > 1 ? 's' : ''} after event completion
-                    </div>
-                  ) : null
-                })()}
+                {/* Days overdue warning */}
+                {daysPending > 0 && (
+                  <div style={{ fontSize: '0.72rem', color: daysPending > 7 ? 'var(--red)' : 'var(--orange)', marginBottom: 8, fontWeight: 600 }}>
+                    ⚠️ Payment pending for {daysPending} day{daysPending > 1 ? 's' : ''} after event completion
+                  </div>
+                )}
                 {billed > 0 && pending > 0 && (
                   <button className="btn btn-sm" style={{ background: 'rgba(240,180,41,0.1)', border: '1px solid rgba(240,180,41,0.25)', color: 'var(--gold)' }}
                     onClick={() => { setPayEvent(ev); setPayForm({ amount: pending.toString(), method: 'cash', collected_by: '', handed_to: '' }); setShowPayModal(true) }}>
