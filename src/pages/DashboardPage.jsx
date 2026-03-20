@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { APP_VERSION, BUILD_DATE } from '../version.js'
 import { CalendarDays, MapPin, Phone, ArrowRight } from 'lucide-react'
 import { getEventTypeEmoji, fmtRs, fmt, COLORS } from '../lib/constants'
+import { canDo } from '../lib/permissions'
 import { format, isToday, isTomorrow } from 'date-fns'
 
 // fmt and fmtRs imported from lib/constants
@@ -69,7 +70,7 @@ function StatCard({ label, value, sub, color, icon, prefix = '' }) {
 export default function DashboardPage() {
   const { profile, lastLogin } = useAuth()
   const navigate = useNavigate()
-  const [stats, setStats] = useState({ events: 0, people: 0, revenue: 0, pending: 0 })
+  const [stats, setStats] = useState({ events: 0, people: 0, revenue: 0, pending: 0, transportDue: 0, machinesOut: 0 })
   const [upcoming, setUpcoming] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -77,21 +78,26 @@ export default function DashboardPage() {
 
   async function loadDashboard() {
     setLoading(true)
-    const [eventsRes, peopleRes, upcomingRes] = await Promise.all([
-      supabase.from('events').select('id,client_amount,amount_received,status').eq('status','upcoming'),
+    const [eventsRes, peopleRes, upcomingRes, transportRes, machinesRes] = await Promise.all([
+      supabase.from('events').select('id,client_amount,amount_received,status').in('status',['upcoming','ongoing']),
       supabase.from('profiles').select('id', { count: 'exact' }),
       supabase.from('events')
         .select('*,clients(full_name,phone),venues(name,address,google_maps_url)')
         .in('status', ['upcoming','ongoing'])
         .order('event_date', { ascending: true })
-        .limit(6)
+        .limit(6),
+      supabase.from('transport_trips').select('id,amount,payment_status').eq('payment_status','pending'),
+      supabase.from('machines').select('id,status').eq('status','at_event'),
     ])
     const evs = eventsRes.data || []
+    const transportDue = (transportRes.data || []).reduce((s,t) => s + (t.amount || 0), 0)
     setStats({
-      events:  evs.length,
-      people:  peopleRes.count || 0,
-      revenue: evs.reduce((s,e) => s + (e.amount_received || 0), 0),
-      pending: evs.reduce((s,e) => s + ((e.client_amount||0)-(e.amount_received||0)), 0),
+      events:        evs.length,
+      people:        peopleRes.count || 0,
+      revenue:       evs.reduce((s,e) => s + (e.amount_received || 0), 0),
+      pending:       evs.reduce((s,e) => s + ((e.client_amount||0)-(e.amount_received||0)), 0),
+      transportDue,
+      machinesOut:   (machinesRes.data || []).length,
     })
     setUpcoming(upcomingRes.data || [])
     setLoading(false)
@@ -130,7 +136,12 @@ export default function DashboardPage() {
             }}>
               {greet()}, {profile?.full_name?.split(' ')[0] || 'Boss'} 👋
             </h1>
-            <p style={{ color: 'var(--text-3)', fontSize: '0.875rem' }}>Here's your event business at a glance</p>
+            <p style={{ color: 'var(--text-3)', fontSize: '0.875rem' }}>
+              {profile?.role === 'admin' ? "Here's your event business at a glance" :
+               profile?.role === 'supervisor' ? "Here's today's overview" :
+               profile?.role === 'driver' ? "Your trips and assignments" :
+               "Your upcoming work"}
+            </p>
           {lastLogin && (
             <p style={{ color: 'var(--text-3)', fontSize: '0.72rem', marginTop: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
               <span>🕐</span> Last login: {format(lastLogin, 'dd MMM yyyy, hh:mm a')}
@@ -152,27 +163,44 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Stats grid — custom cards, not generic */}
+      {/* Stats grid — role filtered */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 14, marginBottom: 24 }}>
         <StatCard
           label="Upcoming Events" icon="🎪"
           value={loading ? '—' : fmt(stats.events)}
           sub="Active bookings" color="gold"
         />
+        {/* Financial stats — admin + supervisor only */}
+        {canDo(profile?.role, 'pay') && <>
+          <StatCard
+            label="Amount Received" icon="💰"
+            value={loading ? '—' : fmtRs(stats.revenue)}
+            sub="Active events" color="green"
+          />
+          <StatCard
+            label="Pending Collection" icon="⏳"
+            value={loading ? '—' : fmtRs(stats.pending)}
+            sub="From clients" color="red"
+          />
+          <StatCard
+            label="Transport Dues" icon="🚛"
+            value={loading ? '—' : fmtRs(stats.transportDue)}
+            sub="Pending payments" color="red"
+          />
+        </>}
+        {/* Team count — admin only */}
+        {canDo(profile?.role, 'report') && (
+          <StatCard
+            label="Team Members" icon="👥"
+            value={loading ? '—' : fmt(stats.people)}
+            sub="Staff & drivers" color="blue"
+          />
+        )}
+        {/* Machines out — all roles that can access machines */}
         <StatCard
-          label="Amount Received" icon="💰"
-          value={loading ? '—' : fmtRs(stats.revenue)}
-          sub="This quarter" color="green"
-        />
-        <StatCard
-          label="Pending Collection" icon="⏳"
-          value={loading ? '—' : fmtRs(stats.pending)}
-          sub="From clients" color="red"
-        />
-        <StatCard
-          label="Team Members" icon="👥"
-          value={loading ? '—' : fmt(stats.people)}
-          sub="Staff & drivers" color="blue"
+          label="Machines Out" icon="📦"
+          value={loading ? '—' : fmt(stats.machinesOut)}
+          sub="Deployed at events" color="gold"
         />
       </div>
 

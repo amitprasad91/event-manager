@@ -1,16 +1,42 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../context/AuthContext'
+import { canDo } from '../lib/permissions'
 import toast from 'react-hot-toast'
-import { Plus, Search, X, Loader2, UserCircle, Phone, Mail, Pencil } from 'lucide-react'
+import { Plus, Search, X, Loader2, UserCircle, Phone, Mail, Pencil, Trash2, ChevronDown, ChevronRight, CalendarDays } from 'lucide-react'
+import { format } from 'date-fns'
+import { getEventStatusBadge } from '../lib/constants'
+
+function ConfirmDialog({ onConfirm, onCancel }) {
+  return (
+    <div className="confirm-overlay">
+      <div className="confirm-box">
+        <div style={{ fontSize: '2rem', marginBottom: 12 }}>🗑️</div>
+        <h3>Delete Client?</h3>
+        <p>This will permanently remove the client. Events linked to this client will keep their data.</p>
+        <div className="confirm-actions">
+          <button className="btn btn-secondary" onClick={onCancel}>Cancel</button>
+          <button className="btn btn-danger" onClick={onConfirm}>Yes, Delete</button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function ClientsPage() {
-  const [clients, setClients] = useState([])
-  const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(true)
+  const [clients, setClients]   = useState([])
+  const [search, setSearch]     = useState('')
+  const [loading, setLoading]   = useState(true)
   const [showModal, setShowModal] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [editing, setEditing] = useState(null)
+  const [saving, setSaving]     = useState(false)
+  const [editing, setEditing]   = useState(null)
+  const [confirmId, setConfirmId]     = useState(null)
+  const [expandedId, setExpandedId]   = useState(null)
+  const [clientEvents, setClientEvents] = useState({})
   const [form, setForm] = useState({ full_name: '', phone: '', email: '', address: '' })
+
+  const { profile } = useAuth()
+  const role = profile?.role || 'staff'
 
   useEffect(() => { loadClients() }, [])
 
@@ -49,6 +75,31 @@ export default function ClientsPage() {
     loadClients()
   }
 
+  // Fix #4: Added delete functionality
+  async function handleDelete(id) {
+    if (!canDo(role, 'delete')) { toast.error('You do not have permission to delete.'); return }
+    const { error } = await supabase.from('clients').delete().eq('id', id)
+    setConfirmId(null)
+    if (error) { toast.error(error.message); return }
+    toast.success('Client deleted!')
+    loadClients()
+  }
+
+  async function loadClientEvents(clientId) {
+    if (clientEvents[clientId]) {
+      // toggle — if already loaded just expand/collapse
+      setExpandedId(expandedId === clientId ? null : clientId)
+      return
+    }
+    const { data } = await supabase
+      .from('events')
+      .select('id, title, event_date, status, client_amount, amount_received')
+      .eq('client_id', clientId)
+      .order('event_date', { ascending: false })
+    setClientEvents(prev => ({ ...prev, [clientId]: data || [] }))
+    setExpandedId(clientId)
+  }
+
   const filtered = clients.filter(c => {
     const q = search.toLowerCase()
     return !q || c.full_name?.toLowerCase().includes(q) || c.phone?.includes(q) || c.email?.toLowerCase().includes(q)
@@ -56,50 +107,109 @@ export default function ClientsPage() {
 
   return (
     <div>
+      {/* Fix #4: Confirm dialog for delete */}
+      {confirmId && (
+        <ConfirmDialog
+          onConfirm={() => handleDelete(confirmId)}
+          onCancel={() => setConfirmId(null)}
+        />
+      )}
+
       <div className="page-header">
         <div>
           <div className="page-title">Clients</div>
           <div className="page-subtitle">{clients.length} clients</div>
         </div>
-        <button className="btn btn-primary" onClick={openNew}><Plus size={15} /> Add Client</button>
+        {canDo(role, 'add') && <button className="btn btn-primary" onClick={openNew}><Plus size={15} /> Add Client</button>
       </div>
 
       <div className="search-bar">
-        <Search />
+        <Search size={15} />
         <input placeholder="Search by name, phone or email…" value={search} onChange={e => setSearch(e.target.value)} />
         {search && <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setSearch('')}><X size={13} /></button>}
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-3)' }}><Loader2 className="spin" /></div>
+        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-3)' }}><Loader2 size={24} className="spin" /></div>
       ) : filtered.length === 0 ? (
-        <div className="empty-state"><UserCircle className="empty-state-icon" /><h3>No clients yet</h3><p>Add your first client</p></div>
+        <div className="empty-state"><UserCircle size={40} className="empty-state-icon" /><h3>No clients yet</h3><p>Add your first client</p></div>
       ) : (
         <div className="card" style={{ padding: 0 }}>
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Address</th><th></th></tr></thead>
+              <thead>
+                {/* Fix #4: Added Actions header */}
+                <tr><th>Name</th><th>Phone</th><th>Email</th><th>Address</th><th>Actions</th></tr>
+              </thead>
               <tbody>
                 {filtered.map(c => (
                   <tr key={c.id}>
                     <td style={{ fontWeight: 600 }}>{c.full_name}</td>
                     <td>
                       {c.phone ? (
-                        <a href={`tel:${c.phone}`} className="flex items-center gap-2" style={{ color: 'var(--blue)', fontSize: '0.875rem' }}>
+                        <a href={`tel:${c.phone}`} style={{ color: 'var(--blue)', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.875rem' }}>
                           <Phone size={12} /> {c.phone}
                         </a>
                       ) : <span style={{ color: 'var(--text-3)' }}>—</span>}
                     </td>
                     <td>
                       {c.email ? (
-                        <a href={`mailto:${c.email}`} className="flex items-center gap-2" style={{ color: 'var(--text-2)', fontSize: '0.875rem' }}>
+                        <a href={`mailto:${c.email}`} style={{ color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.875rem' }}>
                           <Mail size={12} /> {c.email}
                         </a>
                       ) : <span style={{ color: 'var(--text-3)' }}>—</span>}
                     </td>
                     <td style={{ color: 'var(--text-2)', fontSize: '0.85rem', maxWidth: 200 }} className="truncate">{c.address || '—'}</td>
-                    <td><button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(c)}><Pencil size={13} /></button></td>
+                    {/* Fix #4: Edit + Delete buttons */}
+                    <td>
+                      <div className="row-actions">
+                        <button className="btn btn-ghost btn-icon btn-sm" onClick={() => loadClientEvents(c.id)} title="View events"
+                          style={{ color: expandedId === c.id ? 'var(--accent-light)' : undefined }}>
+                          {expandedId === c.id ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                        </button>
+                        <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(c)} title="Edit"><Pencil size={13} /></button>
+                        <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setConfirmId(c.id)} title="Delete" style={{ color: 'var(--red)' }}><Trash2 size={13} /></button>
+                      </div>
+                    </td>
                   </tr>
+                  {/* Event history row */}
+                  {expandedId === c.id && (
+                    <tr>
+                      <td colSpan={5} style={{ padding: 0, background: 'var(--bg-3)' }}>
+                        <div style={{ padding: '12px 18px' }}>
+                          <div style={{ fontSize: '0.72rem', fontFamily: 'Syne', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-3)', marginBottom: 8 }}>
+                            📅 Event History
+                          </div>
+                          {!clientEvents[c.id] ? (
+                            <div style={{ color: 'var(--text-3)', fontSize: '0.8rem' }}>Loading…</div>
+                          ) : clientEvents[c.id].length === 0 ? (
+                            <div style={{ color: 'var(--text-3)', fontSize: '0.8rem' }}>No events yet for this client</div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                              {clientEvents[c.id].map(ev => (
+                                <div key={ev.id} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.82rem' }}>
+                                  <span className={`badge ${getEventStatusBadge(ev.status)}`} style={{ fontSize: '0.65rem' }}>{ev.status}</span>
+                                  <span style={{ fontWeight: 600, flex: 1 }}>{ev.title}</span>
+                                  <span style={{ color: 'var(--text-3)' }}>{format(new Date(ev.event_date), 'dd MMM yyyy')}</span>
+                                  {ev.client_amount > 0 && (
+                                    <span style={{ color: 'var(--gold)', fontFamily: 'monospace', fontWeight: 600 }}>
+                                      ₹{ev.client_amount.toLocaleString('en-IN')}
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                              <div style={{ borderTop: '1px solid var(--border)', marginTop: 4, paddingTop: 6, display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem' }}>
+                                <span style={{ color: 'var(--text-3)' }}>{clientEvents[c.id].length} event{clientEvents[c.id].length !== 1 ? 's' : ''} total</span>
+                                <span style={{ color: 'var(--gold)', fontWeight: 700 }}>
+                                  Total: ₹{clientEvents[c.id].reduce((s, e) => s + (e.client_amount || 0), 0).toLocaleString('en-IN')}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                 ))}
               </tbody>
             </table>
@@ -136,7 +246,7 @@ export default function ClientsPage() {
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
                 <button type="submit" className="btn btn-primary" disabled={saving}>
-                  {saving ? <Loader2 size={14} /> : editing ? 'Save Changes' : 'Add Client'}
+                  {saving ? <Loader2 size={14} className="spin" /> : editing ? 'Save Changes' : 'Add Client'}
                 </button>
               </div>
             </form>
