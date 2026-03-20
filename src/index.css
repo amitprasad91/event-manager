@@ -10,16 +10,16 @@
 /* ── DARK THEME ── */
 :root,
 [data-theme="dark"] {
-  --bg:        #080b12;
-  --bg-2:      #0e1420;
-  --bg-3:      #141d2e;
-  --bg-4:      #1c2840;
-  --border:    #1e2d45;
-  --border-light: #2a3d5c;
+  --bg:        #0c1018;
+  --bg-2:      #131b28;
+  --bg-3:      #1a2438;
+  --bg-4:      #222e46;
+  --border:    #263548;
+  --border-light: #324460;
 
-  --text:      #eef2ff;
-  --text-2:    #8da0c0;
-  --text-3:    #4a607e;
+  --text:      #f0f4ff;
+  --text-2:    #a8bdd8;
+  --text-3:    #6b84a8;
 
   /* Electric violet-blue accent */
   --accent:        #6c63ff;
@@ -470,7 +470,7 @@ svg { stroke-width: 1.5 !important; flex-shrink: 0; }
 
 /* ── FORMS ── */
 .form-group { margin-bottom: 14px; }
-.form-label { display: block; font-size: 0.8rem; font-weight: 500; color: var(--text-2); margin-bottom: 5px; }
+.form-label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text); margin-bottom: 5px; }
 .form-input, .form-select, .form-textarea {
   width: 100%; padding: 9px 12px;
   background: var(--bg-3); border: 1px solid var(--border);
@@ -507,6 +507,7 @@ svg { stroke-width: 1.5 !important; flex-shrink: 0; }
   gap: 8px; margin-top: 20px; padding-top: 16px;
   border-top: 1px solid var(--border);
 }
+.modal-title { font-size: 1rem; font-weight: 700; color: var(--text); }
 
 /* ── TABLE ── */
 .table-wrap {
@@ -553,7 +554,7 @@ tr:hover td { background: var(--bg-3); }
   margin-bottom: 24px; gap: 16px; flex-wrap: wrap;
 }
 .page-title { font-size: 1.65rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.4; padding-bottom: 0.05em; overflow: visible; }
-.page-subtitle { color: var(--text-3); font-size: 0.875rem; margin-top: 4px; }
+.page-subtitle { color: var(--text-2); font-size: 0.875rem; margin-top: 4px; }
 
 /* ── TYPOGRAPHY DESCENDER FIX ── */
 /* Syne and Cormorant Garamond have deep descenders — ensure they never clip */
@@ -574,7 +575,7 @@ h1, h2, h3, .page-title, .card-title, .modal-title, .nav-section-label {
 .search-bar svg { color: var(--text-3); flex-shrink: 0; width: 15px; height: 15px; }
 
 /* ── EMPTY STATE ── */
-.empty-state { text-align: center; padding: 48px 20px; color: var(--text-3); }
+.empty-state { text-align: center; padding: 48px 20px; color: var(--text-2); }
 .empty-state-icon { width: 40px; height: 40px; margin: 0 auto 14px; opacity: 0.2; }
 .empty-state h3 { font-size: 0.9375rem; color: var(--text-2); margin-bottom: 6px; }
 
@@ -836,3 +837,51 @@ h1, h2, h3, .page-title, .card-title, .modal-title, .nav-section-label {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 100px;
 }
+
+/* ── PROFIT SPLIT MOBILE FIX ── */
+@media (max-width: 768px) {
+  /* Force single column on mobile for all 2-col grids */
+  .profit-split-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Card financials — stack on mobile */
+  .financials-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Co-owners grid — single col on mobile */
+  .co-owners-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Venues grid — single col on mobile */
+  .venues-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── DARK MODE CONTRAST IMPROVEMENTS ── */
+[data-theme="dark"] .form-label { color: #c8d8f0; }
+[data-theme="dark"] td { color: #c0d0e8; }
+[data-theme="dark"] .page-subtitle { color: #8fb4d8; }
+[data-theme="dark"] .nav-item { color: rgba(200,218,240,0.75); }
+[data-theme="dark"] .nav-item:hover { color: #fff; }
+[data-theme="dark"] .nav-item.active { color: #fff; }
+[data-theme="dark"] .card-title { color: #e0eaff; }
+[data-theme="dark"] .modal-title { color: #f0f4ff; }
+[data-theme="dark"] .sidebar-action { color: rgba(200,218,240,0.7); }
+[data-theme="dark"] .sidebar-action:hover { color: #fff; }
+[data-theme="dark"] select option { background: #1a2438; color: #c0d0e8; }
+[data-theme="dark"] .search-bar input::placeholder { color: rgba(168,189,216,0.4); }
+[data-theme="dark"] .form-input::placeholder { color: rgba(168,189,216,0.35); }
+[data-theme="dark"] .form-textarea::placeholder { color: rgba(168,189,216,0.35); }
+[data-theme="dark"] .form-input,
+[data-theme="dark"] .form-select,
+[data-theme="dark"] .form-textarea {
+  color: #e8f0ff;
+  background: rgba(255,255,255,0.06);
+}
+[data-theme="dark"] .version-badge-btn { color: rgba(168,189,216,0.6); }
+[data-theme="dark"] .user-name { color: #e8f0ff; }
+[data-theme="dark"] .user-role { color: rgba(168,189,216,0.6); }
