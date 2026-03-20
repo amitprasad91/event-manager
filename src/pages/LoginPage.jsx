@@ -75,17 +75,16 @@ export default function LoginPage() {
       {/* ── Page shell ── */}
       <div style={{
         minHeight:'100vh', display:'flex',
-        background:'#0d0818', overflow:'hidden', position:'relative',
+        background:'#080409', overflow:'hidden', position:'relative',
       }}>
 
         {/* Background radial glows */}
         <div style={{
           position:'absolute', inset:0, zIndex:0, pointerEvents:'none',
           background:`
-            radial-gradient(ellipse 80% 60% at 20% 0%,   rgba(108,63,255,.22)  0%,transparent 60%),
-            radial-gradient(ellipse 60% 50% at 85% 85%,  rgba(240,120,10,.18)  0%,transparent 55%),
-            radial-gradient(ellipse 50% 70% at 0%  55%,  rgba(180,20,80,.15)   0%,transparent 55%),
-            radial-gradient(ellipse 40% 40% at 60% 40%,  rgba(30,100,220,.12)  0%,transparent 50%)
+            radial-gradient(ellipse 70% 50% at 30% 10%,  rgba(160,20,20,.18)  0%,transparent 60%),
+            radial-gradient(ellipse 50% 40% at 80% 80%,  rgba(220,120,10,.12) 0%,transparent 55%),
+            radial-gradient(ellipse 40% 60% at 5%  60%,  rgba(100,10,60,.12)  0%,transparent 55%)
           `,
         }}/>
 
@@ -131,8 +130,8 @@ export default function LoginPage() {
           <div className="login-wrap" style={{ width:'100%', maxWidth:400 }}>
 
             <div className="login-card-anim" style={{
-              background:'rgba(13,8,26,.95)',
-              border:'1px solid rgba(240,180,41,.25)',
+              background:'rgba(10,5,3,.93)',
+              border:'1px solid rgba(240,180,41,.2)',
               borderRadius:20,
               padding:'32px 28px 24px',
               backdropFilter:'blur(20px)',
@@ -201,12 +200,11 @@ export default function LoginPage() {
                   fontWeight: 700,
                   fontStyle: 'italic',
                   letterSpacing: '0.01em',
-                  color: '#f0f4ff',
+                  color: 'rgba(255,255,255,0.92)',
                   marginBottom: 3,
-                  lineHeight: 1.4,
-                  paddingBottom: '0.1em',
+                  lineHeight: 1.1,
                 }}>Welcome back</h1>
-                <p style={{ color:'rgba(200,215,240,.55)', fontSize:'.78rem' }}>
+                <p style={{ color:'rgba(255,255,255,.3)', fontSize:'.78rem' }}>
                   Sign in to manage your events
                 </p>
               </div>
@@ -216,7 +214,7 @@ export default function LoginPage() {
 
                 {/* Email */}
                 <div style={{ marginBottom:12 }}>
-                  <label style={{ display:'block', fontSize:'.72rem', fontWeight:500, color:'rgba(255,255,255,.55)', marginBottom:4 }}>
+                  <label style={{ display:'block', fontSize:'.72rem', fontWeight:500, color:'rgba(255,255,255,.38)', marginBottom:4 }}>
                     Email Address
                   </label>
                   <div style={{ position:'relative' }}>
@@ -224,9 +222,9 @@ export default function LoginPage() {
                     <input type="email"
                       style={{
                         width:'100%', padding:'9px 11px 9px 32px',
-                        background:'rgba(255,255,255,.07)',
-                        border:`1px solid ${errors.email?'#ff5c7a':'rgba(240,180,41,.18)'}`,
-                        borderRadius:9, color:'#f0f4ff',
+                        background:'rgba(255,255,255,.04)',
+                        border:`1px solid ${errors.email?'#ff5c7a':'rgba(240,180,41,.14)'}`,
+                        borderRadius:9, color:'#fff',
                         fontSize:'.875rem', outline:'none',
                         fontFamily:'DM Sans,sans-serif',
                       }}
@@ -243,7 +241,7 @@ export default function LoginPage() {
 
                 {/* Password */}
                 <div style={{ marginBottom:16 }}>
-                  <label style={{ display:'block', fontSize:'.72rem', fontWeight:500, color:'rgba(255,255,255,.55)', marginBottom:4 }}>
+                  <label style={{ display:'block', fontSize:'.72rem', fontWeight:500, color:'rgba(255,255,255,.38)', marginBottom:4 }}>
                     Password
                   </label>
                   <div style={{ position:'relative' }}>
@@ -251,9 +249,9 @@ export default function LoginPage() {
                     <input type="password"
                       style={{
                         width:'100%', padding:'9px 11px 9px 32px',
-                        background:'rgba(255,255,255,.07)',
-                        border:`1px solid ${errors.password?'#ff5c7a':'rgba(240,180,41,.18)'}`,
-                        borderRadius:9, color:'#f0f4ff',
+                        background:'rgba(255,255,255,.04)',
+                        border:`1px solid ${errors.password?'#ff5c7a':'rgba(240,180,41,.14)'}`,
+                        borderRadius:9, color:'#fff',
                         fontSize:'.875rem', outline:'none',
                         fontFamily:'DM Sans,sans-serif',
                       }}
@@ -283,8 +281,7 @@ export default function LoginPage() {
                   color:loading?'rgba(255,255,255,.4)':'#1a0800',
                   fontFamily:'Syne,sans-serif', fontWeight:800,
                   fontSize:'.88rem', letterSpacing:'.05em',
-                  lineHeight:1.6,
-                  minHeight: 46,
+                  lineHeight:1.5,
                   cursor:loading?'not-allowed':'pointer',
                   display:'flex', alignItems:'center', justifyContent:'center', gap:7,
                   boxShadow:loading?'none':'0 6px 20px rgba(240,140,20,.3)',
@@ -317,8 +314,8 @@ export default function LoginPage() {
         {/* ════════════════ RIGHT — Decorative panel (desktop only) ════════════════ */}
         <div className="login-right-panel" style={{
           width:360,
-          background:'rgba(10,6,22,.85)',
-          borderLeft:'1px solid rgba(108,99,255,.12)',
+          background:'rgba(8,4,2,.75)',
+          borderLeft:'1px solid rgba(240,180,41,.07)',
           display:'flex', flexDirection:'column',
           alignItems:'center', justifyContent:'center',
           padding:'40px 32px', position:'relative', overflow:'hidden', zIndex:5,
