@@ -1,59 +1,59 @@
 /**
  * ============================================================
  * ALL SOLUTIONS — ROLE-BASED PERMISSIONS
- * Defines what each role can see and do
  * ============================================================
  */
 
-// Pages each role can access
 export const ROLE_PAGES = {
   admin: [
     '/dashboard', '/events', '/people', '/clients', '/machines',
     '/payments', '/venues', '/performers', '/transport',
-    '/co-owners', '/profit-split'
+    '/co-owners', '/profit-split', '/user-guide'
   ],
   supervisor: [
     '/dashboard', '/events', '/people', '/clients', '/machines',
-    '/payments', '/venues', '/performers', '/transport'
+    '/payments', '/venues', '/performers', '/transport', '/user-guide'
   ],
   staff: [
-    '/dashboard', '/events', '/machines', '/transport'
+    '/dashboard', '/events', '/machines', '/transport', '/user-guide'
   ],
   driver: [
-    '/dashboard', '/transport'
+    '/dashboard', '/transport', '/user-guide'
   ]
 }
 
-// Nav sections each role can see
 export const ROLE_NAV = {
   admin: {
     Main:       ['Dashboard', 'Events'],
     Directory:  ['People & Staff', 'Clients', 'Performers', 'Venues'],
     Operations: ['Machines & Items', 'Transport', 'Payments'],
     Finance:    ['Co-Owners', 'Profit Split'],
+    Help:       ['User Guide'],
   },
   supervisor: {
     Main:       ['Dashboard', 'Events'],
     Directory:  ['People & Staff', 'Clients', 'Performers', 'Venues'],
     Operations: ['Machines & Items', 'Transport', 'Payments'],
+    Help:       ['User Guide'],
   },
   staff: {
     Main:       ['Dashboard', 'Events'],
     Operations: ['Machines & Items', 'Transport'],
+    Help:       ['User Guide'],
   },
   driver: {
     Main:       ['Dashboard'],
     Operations: ['Transport'],
+    Help:       ['User Guide'],
   }
 }
 
-// Action permissions
 export const canDo = (role, action) => {
   const perms = {
-    admin: ['add', 'edit', 'delete', 'view', 'pay', 'split', 'report'],
+    admin:      ['add', 'edit', 'delete', 'view', 'pay', 'split', 'report'],
     supervisor: ['add', 'edit', 'view', 'pay'],
-    staff: ['view', 'add'],
-    driver: ['view'],
+    staff:      ['view', 'add'],
+    driver:     ['view'],
   }
   return perms[role]?.includes(action) || false
 }

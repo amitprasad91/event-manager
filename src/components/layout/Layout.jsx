@@ -8,7 +8,7 @@ import { getNavForRole, canAccessPage } from '../../lib/permissions'
 import {
   LayoutDashboard, CalendarDays, Users, UserCircle,
   Package, CreditCard, Menu, X, LogOut, Sun, Moon,
-  MapPin, Mic2, Truck, Users2, PieChart
+  MapPin, Mic2, Truck, Users2, PieChart, BookOpen
 } from 'lucide-react'
 
 const ICON_MAP = {
@@ -23,6 +23,7 @@ const ICON_MAP = {
   'Payments':         CreditCard,
   'Co-Owners':        Users2,
   'Profit Split':     PieChart,
+  'User Guide':       BookOpen,
 }
 
 const ROUTE_MAP = {
@@ -37,6 +38,7 @@ const ROUTE_MAP = {
   'Payments':         '/payments',
   'Co-Owners':        '/co-owners',
   'Profit Split':     '/profit-split',
+  'User Guide':       '/user-guide',
 }
 
 export function BrandName({ fontSize = '1.05rem', showSub = true }) {

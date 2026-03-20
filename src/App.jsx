@@ -14,6 +14,7 @@ import PerformersPage from './pages/PerformersPage'
 import TransportPage from './pages/TransportPage'
 import CoOwnersPage from './pages/CoOwnersPage'
 import ProfitSplitPage from './pages/ProfitSplitPage'
+import UserGuidePage from './pages/UserGuidePage'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="transport"    element={<TransportPage />} />
         <Route path="co-owners"    element={<CoOwnersPage />} />
         <Route path="profit-split" element={<ProfitSplitPage />} />
+        <Route path="user-guide"    element={<UserGuidePage />} />
       </Route>
     </Routes>
   )

@@ -1,23 +1,19 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
-import { Loader2, CheckCircle, Phone, Wallet } from 'lucide-react'
+import { Loader2, CheckCircle, Phone, Wallet, User, CreditCard, Calendar } from 'lucide-react'
+import { COLORS, fmtRs, calcProgress, calcStaffDue, getItemTypeEmoji } from '../lib/constants'
 import { format, isThisQuarter } from 'date-fns'
 
-function fmtRs(n) {
-  if (!n || n === 0) return '₹0'
-  if (n >= 100000) return `₹${(n/100000).toFixed(1)}L`
-  if (n >= 1000) return `₹${(n/1000).toFixed(1)}k`
-  return `₹${n}`
-}
+// fmtRs imported from constants
 
 // Summary stat card for payments
 function PayStat({ label, value, icon, color, sub }) {
   const palette = {
-    gold:  { text: '#f0b429', bg: 'rgba(240,180,41,0.08)',  border: 'rgba(240,180,41,0.2)' },
-    green: { text: '#10d4a0', bg: 'rgba(16,212,160,0.08)',  border: 'rgba(16,212,160,0.2)' },
-    red:   { text: '#ff5c7a', bg: 'rgba(255,92,122,0.08)',  border: 'rgba(255,92,122,0.2)' },
-    blue:  { text: '#6c63ff', bg: 'rgba(108,99,255,0.08)',  border: 'rgba(108,99,255,0.2)' },
+    gold:  { text: COLORS.gold.hex,  bg: COLORS.gold.dim,  border: COLORS.gold.border  },
+    green: { text: COLORS.green.hex, bg: COLORS.green.dim, border: COLORS.green.border },
+    red:   { text: COLORS.red.hex,   bg: COLORS.red.dim,   border: COLORS.red.border   },
+    blue:  { text: COLORS.blue.hex,  bg: COLORS.blue.dim,  border: COLORS.blue.border  },
   }
   const c = palette[color]
   return (
@@ -51,21 +47,27 @@ export default function PaymentsPage() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('collect')
   const [updatingId, setUpdatingId] = useState(null)
+  const [profiles, setProfiles] = useState([])
+  const [showPayModal, setShowPayModal] = useState(false)
+  const [payEvent, setPayEvent] = useState(null)
+  const [payForm, setPayForm] = useState({ amount: '', method: 'cash', collected_by: '', handed_to: '' })
 
   useEffect(() => { loadAll() }, [])
 
   async function loadAll() {
     setLoading(true)
-    const [itemsRes, evRes] = await Promise.all([
+    const [itemsRes, evRes, profRes] = await Promise.all([
       supabase.from('event_items')
         .select('*,events(title,event_date,client_amount,amount_received,clients(full_name,phone))')
         .order('created_at', { ascending: false }),
       supabase.from('events')
-        .select('id,title,event_date,client_amount,amount_received,status,clients(full_name,phone)')
-        .order('event_date', { ascending: false })
+        .select('id,title,event_date,client_amount,amount_received,status,collection_method,collected_by_profile_id,collected_at,handed_to_profile_id,handed_at,clients(full_name,phone)')
+        .order('event_date', { ascending: false }),
+      supabase.from('profiles').select('id,full_name').order('full_name'),
     ])
     setEventItems(itemsRes.data || [])
     setEvents(evRes.data || [])
+    setProfiles(profRes.data || [])
     setLoading(false)
   }
 
@@ -88,6 +90,27 @@ export default function PaymentsPage() {
     setUpdatingId(null)
     if (error) { toast.error(error.message); return }
     toast.success('Payment updated!')
+    loadAll()
+  }
+
+  // Issue #14: Record who collected, method, and handover
+  async function recordCollection(eventId) {
+    const val = parseFloat(payForm.amount)
+    if (isNaN(val)) { toast.error('Enter a valid amount'); return }
+    setUpdatingId(eventId)
+    const { error } = await supabase.from('events').update({
+      amount_received:         val,
+      collection_method:       payForm.method,
+      collected_by_profile_id: payForm.collected_by || null,
+      collected_at:            new Date().toISOString(),
+      handed_to_profile_id:    payForm.handed_to || null,
+      handed_at:               payForm.handed_to ? new Date().toISOString() : null,
+    }).eq('id', eventId)
+    setUpdatingId(null)
+    if (error) { toast.error(error.message); return }
+    toast.success('Payment recorded!')
+    setShowPayModal(false)
+    setPayEvent(null)
     loadAll()
   }
 
@@ -154,7 +177,7 @@ export default function PaymentsPage() {
             const billed   = ev.client_amount    || 0
             const received = ev.amount_received  || 0
             const pending  = billed - received
-            const pct      = billed > 0 ? Math.min(100, Math.round((received / billed) * 100)) : 0
+            const pct      = calcProgress(received, billed)
 
             return (
               <div key={ev.id} style={{
@@ -181,7 +204,7 @@ export default function PaymentsPage() {
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     <div style={{
-                      fontSize: '1.1rem', fontWeight: 800, color: '#f0b429',
+                      fontSize: '1.1rem', fontWeight: 800, color: COLORS.gold.hex,
                       fontFamily: '"DM Mono","Courier New",monospace',
                     }}>
                       {fmtRs(billed)}
@@ -215,25 +238,30 @@ export default function PaymentsPage() {
                   </div>
                 </div>
 
-                {/* Editable received amount */}
-                {billed > 0 && pending > 0 && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-3)', whiteSpace: 'nowrap' }}>Update received:</span>
-                    <input
-                      type="number"
-                      defaultValue={received}
-                      onBlur={e => { if (parseFloat(e.target.value) !== received) updateEventPayment(ev.id, e.target.value) }}
-                      style={{
-                        flex: 1, maxWidth: 120,
-                        background: 'var(--bg-3)', border: '1px solid var(--border)',
-                        borderRadius: 8, padding: '5px 10px',
-                        color: 'var(--green)', fontWeight: 700, fontSize: '0.85rem',
-                        fontFamily: '"DM Mono","Courier New",monospace',
-                        outline: 'none',
-                      }}
-                    />
-                    {updatingId === ev.id && <Loader2 size={13} className="spin" />}
+                {/* Issue #14: Payment collection details */}
+                {ev.collected_at && (
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-3)', marginBottom: 8, background: 'var(--bg-3)', borderRadius: 8, padding: '6px 10px' }}>
+                    <span style={{ marginRight: 8 }}>
+                      {ev.collection_method === 'cash' ? '💵' : ev.collection_method === 'online' ? '📱' : '🏦'} {ev.collection_method}
+                    </span>
+                    {ev.collected_at && <span style={{ marginRight: 8 }}>· {format(new Date(ev.collected_at), 'dd MMM, hh:mm a')}</span>}
+                    {ev.handed_at && <span>· Handed over {format(new Date(ev.handed_at), 'dd MMM')}</span>}
                   </div>
+                )}
+                {/* Issue #14: Days pending after event completion */}
+                {ev.status === 'completed' && pending > 0 && (() => {
+                  const days = Math.floor((new Date() - new Date(ev.event_date)) / (1000*60*60*24))
+                  return days > 0 ? (
+                    <div style={{ fontSize: '0.72rem', color: days > 7 ? 'var(--red)' : 'var(--orange)', marginBottom: 8, fontWeight: 600 }}>
+                      ⚠️ Payment pending for {days} day{days > 1 ? 's' : ''} after event completion
+                    </div>
+                  ) : null
+                })()}
+                {billed > 0 && pending > 0 && (
+                  <button className="btn btn-sm" style={{ background: 'rgba(240,180,41,0.1)', border: '1px solid rgba(240,180,41,0.25)', color: 'var(--gold)' }}
+                    onClick={() => { setPayEvent(ev); setPayForm({ amount: pending.toString(), method: 'cash', collected_by: '', handed_to: '' }); setShowPayModal(true) }}>
+                    <CreditCard size={12} /> Record Payment
+                  </button>
                 )}
               </div>
             )
@@ -265,10 +293,7 @@ export default function PaymentsPage() {
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: '1rem',
                     }}>
-                      {item.item_type === 'supervisor' ? '👷' :
-                       item.item_type === 'performer'  ? '🎭' :
-                       item.item_type === 'transport'  ? '🚛' :
-                       item.item_type === 'machine'    ? '📦' : '👤'}
+                      {getItemTypeEmoji(item.item_type)}
                     </div>
 
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -309,6 +334,51 @@ export default function PaymentsPage() {
               })}
             </div>
           )}
+        </div>
+      )}
+      {/* Issue #14: Payment collection modal */}
+      {showPayModal && payEvent && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowPayModal(false)}>
+          <div className="modal" style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <span className="modal-title">Record Payment — {payEvent.title}</span>
+              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setShowPayModal(false)}><X size={16} /></button>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Amount Received (₹) *</label>
+              <input type="number" className="form-input" value={payForm.amount} onChange={e => setPayForm({...payForm, amount: e.target.value})} />
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Payment Method</label>
+                <select className="form-select" value={payForm.method} onChange={e => setPayForm({...payForm, method: e.target.value})}>
+                  <option value="cash">💵 Cash</option>
+                  <option value="online">📱 Online / UPI</option>
+                  <option value="cheque">🏦 Cheque</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Collected By</label>
+                <select className="form-select" value={payForm.collected_by} onChange={e => setPayForm({...payForm, collected_by: e.target.value})}>
+                  <option value="">Select person…</option>
+                  {profiles.map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Handed Over To</label>
+              <select className="form-select" value={payForm.handed_to} onChange={e => setPayForm({...payForm, handed_to: e.target.value})}>
+                <option value="">Select person (optional)…</option>
+                {profiles.map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+              </select>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowPayModal(false)}>Cancel</button>
+              <button className="btn btn-primary" disabled={updatingId === payEvent.id} onClick={() => recordCollection(payEvent.id)}>
+                {updatingId === payEvent.id ? <Loader2 size={14} className="spin" /> : <><CheckCircle size={13} /> Save Payment</>}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
