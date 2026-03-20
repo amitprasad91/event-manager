@@ -31,6 +31,7 @@ export default function EventsPage() {
   const [venues, setVenues]     = useState([])
   const [search, setSearch]     = useState('')
   const [filterStatus, setFilterStatus] = useState('')
+  const [myOnly, setMyOnly]               = useState(false)
   const [loading, setLoading]   = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [saving, setSaving]     = useState(false)
@@ -56,7 +57,7 @@ export default function EventsPage() {
   async function loadAll() {
     setLoading(true)
     const [evRes, clRes, veRes] = await Promise.all([
-      supabase.from('events').select('*, clients(full_name, phone), venues(name, google_maps_url)').order('event_date', { ascending: false }),
+      supabase.from('events').select('*, clients(full_name, phone), venues(name, google_maps_url), event_items(assigned_profile_id)').order('event_date', { ascending: false }),
       supabase.from('clients').select('id, full_name').order('full_name'),
       supabase.from('venues').select('id, name').order('name'),
     ])
@@ -199,10 +200,11 @@ export default function EventsPage() {
   }
 
   const filtered = events.filter(e => {
-    const q = search.toLowerCase()
+    const q      = search.toLowerCase()
     const matchQ = !q || e.title.toLowerCase().includes(q) || e.clients?.full_name?.toLowerCase().includes(q)
-    const matchS  = !filterStatus || e.status === filterStatus
-    return matchQ && matchS
+    const matchS = !filterStatus || e.status === filterStatus
+    const matchM = !myOnly || (e.event_items || []).some(i => i.assigned_profile_id === profile?.id)
+    return matchQ && matchS && matchM
   })
 
   return (
@@ -288,6 +290,19 @@ export default function EventsPage() {
             <option value="">All Status</option>
             {EVENT_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
+          {(profile?.role === 'staff' || profile?.role === 'driver') && (
+            <button
+              onClick={() => setMyOnly(v => !v)}
+              className="btn btn-sm"
+              style={{
+                background: myOnly ? 'var(--accent)' : 'var(--bg-2)',
+                color: myOnly ? '#fff' : 'var(--text-2)',
+                border: `1px solid ${myOnly ? 'var(--accent)' : 'var(--border)'}`,
+                whiteSpace: 'nowrap',
+              }}>
+              👤 My Events
+            </button>
+          )}
         </div>
       )}
 
@@ -302,7 +317,7 @@ export default function EventsPage() {
           <div className="table-wrap">
             <table>
               <thead>
-                <tr><th>Event</th><th>Date</th><th>Client</th><th>Venue</th><th>Type</th><th>Status</th><th>Amount</th><th>Actions</th></tr>
+                <tr><th>Event</th><th>Date</th><th>Client</th><th>Venue</th><th>Type</th><th>Status</th>{canDo(profile?.role,'pay') && <th>Amount</th>}<th>Actions</th></tr>
               </thead>
               <tbody>
                 {filtered.map(ev => (
@@ -320,13 +335,15 @@ export default function EventsPage() {
                     </td>
                     <td><span className={`badge ${getEventTypeBadge(ev.event_type)}`}>{ev.event_type}</span></td>
                     <td><span className={`badge ${getEventStatusBadge(ev.status)}`}>{ev.status}</span></td>
-                    <td>
-                      {ev.client_amount > 0 && (
-                        <span style={{ color: 'var(--gold)', fontWeight: 600, fontSize: '0.875rem', fontFamily: 'monospace' }}>
-                          ₹{ev.client_amount.toLocaleString('en-IN')}
-                        </span>
-                      )}
-                    </td>
+                    {canDo(profile?.role,'pay') && (
+                      <td>
+                        {ev.client_amount > 0 && (
+                          <span style={{ color: 'var(--gold)', fontWeight: 600, fontSize: '0.875rem', fontFamily: 'monospace' }}>
+                            ₹{ev.client_amount.toLocaleString('en-IN')}
+                          </span>
+                        )}
+                      </td>
+                    )}
                     {/* Fix #5: Edit + Delete actions */}
                     <td>
                       <div className="row-actions" onClick={e => e.stopPropagation()}>

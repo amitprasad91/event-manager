@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { APP_VERSION, BUILD_DATE } from '../version.js'
 import { CalendarDays, MapPin, Phone, ArrowRight } from 'lucide-react'
 import { getEventTypeEmoji, fmtRs, fmt, COLORS } from '../lib/constants'
+import { canDo } from '../lib/permissions'
 import { format, isToday, isTomorrow } from 'date-fns'
 
 // fmt and fmtRs imported from lib/constants
@@ -135,7 +136,12 @@ export default function DashboardPage() {
             }}>
               {greet()}, {profile?.full_name?.split(' ')[0] || 'Boss'} 👋
             </h1>
-            <p style={{ color: 'var(--text-3)', fontSize: '0.875rem' }}>Here's your event business at a glance</p>
+            <p style={{ color: 'var(--text-3)', fontSize: '0.875rem' }}>
+              {profile?.role === 'admin' ? "Here's your event business at a glance" :
+               profile?.role === 'supervisor' ? "Here's today's overview" :
+               profile?.role === 'driver' ? "Your trips and assignments" :
+               "Your upcoming work"}
+            </p>
           {lastLogin && (
             <p style={{ color: 'var(--text-3)', fontSize: '0.72rem', marginTop: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
               <span>🕐</span> Last login: {format(lastLogin, 'dd MMM yyyy, hh:mm a')}
@@ -157,33 +163,40 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Stats grid — custom cards, not generic */}
+      {/* Stats grid — role filtered */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 14, marginBottom: 24 }}>
         <StatCard
           label="Upcoming Events" icon="🎪"
           value={loading ? '—' : fmt(stats.events)}
           sub="Active bookings" color="gold"
         />
-        <StatCard
-          label="Amount Received" icon="💰"
-          value={loading ? '—' : fmtRs(stats.revenue)}
-          sub="This quarter" color="green"
-        />
-        <StatCard
-          label="Pending Collection" icon="⏳"
-          value={loading ? '—' : fmtRs(stats.pending)}
-          sub="From clients" color="red"
-        />
-        <StatCard
-          label="Team Members" icon="👥"
-          value={loading ? '—' : fmt(stats.people)}
-          sub="Staff & drivers" color="blue"
-        />
-        <StatCard
-          label="Transport Dues" icon="🚛"
-          value={loading ? '—' : fmtRs(stats.transportDue)}
-          sub="Pending payments" color="red"
-        />
+        {/* Financial stats — admin + supervisor only */}
+        {canDo(profile?.role, 'pay') && <>
+          <StatCard
+            label="Amount Received" icon="💰"
+            value={loading ? '—' : fmtRs(stats.revenue)}
+            sub="Active events" color="green"
+          />
+          <StatCard
+            label="Pending Collection" icon="⏳"
+            value={loading ? '—' : fmtRs(stats.pending)}
+            sub="From clients" color="red"
+          />
+          <StatCard
+            label="Transport Dues" icon="🚛"
+            value={loading ? '—' : fmtRs(stats.transportDue)}
+            sub="Pending payments" color="red"
+          />
+        </>}
+        {/* Team count — admin only */}
+        {canDo(profile?.role, 'report') && (
+          <StatCard
+            label="Team Members" icon="👥"
+            value={loading ? '—' : fmt(stats.people)}
+            sub="Staff & drivers" color="blue"
+          />
+        )}
+        {/* Machines out — all roles that can access machines */}
         <StatCard
           label="Machines Out" icon="📦"
           value={loading ? '—' : fmt(stats.machinesOut)}

@@ -3,7 +3,9 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { canDo } from '../lib/permissions'
 import toast from 'react-hot-toast'
-import { Plus, Search, X, Loader2, UserCircle, Phone, Mail, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Search, X, Loader2, UserCircle, Phone, Mail, Pencil, Trash2, ChevronDown, ChevronRight, CalendarDays } from 'lucide-react'
+import { format } from 'date-fns'
+import { getEventStatusBadge } from '../lib/constants'
 
 function ConfirmDialog({ onConfirm, onCancel }) {
   return (
@@ -28,7 +30,9 @@ export default function ClientsPage() {
   const [showModal, setShowModal] = useState(false)
   const [saving, setSaving]     = useState(false)
   const [editing, setEditing]   = useState(null)
-  const [confirmId, setConfirmId] = useState(null)
+  const [confirmId, setConfirmId]     = useState(null)
+  const [expandedId, setExpandedId]   = useState(null)
+  const [clientEvents, setClientEvents] = useState({})
   const [form, setForm] = useState({ full_name: '', phone: '', email: '', address: '' })
 
   const { profile } = useAuth()
@@ -79,6 +83,21 @@ export default function ClientsPage() {
     if (error) { toast.error(error.message); return }
     toast.success('Client deleted!')
     loadClients()
+  }
+
+  async function loadClientEvents(clientId) {
+    if (clientEvents[clientId]) {
+      // toggle — if already loaded just expand/collapse
+      setExpandedId(expandedId === clientId ? null : clientId)
+      return
+    }
+    const { data } = await supabase
+      .from('events')
+      .select('id, title, event_date, status, client_amount, amount_received')
+      .eq('client_id', clientId)
+      .order('event_date', { ascending: false })
+    setClientEvents(prev => ({ ...prev, [clientId]: data || [] }))
+    setExpandedId(clientId)
   }
 
   const filtered = clients.filter(c => {
@@ -144,11 +163,53 @@ export default function ClientsPage() {
                     {/* Fix #4: Edit + Delete buttons */}
                     <td>
                       <div className="row-actions">
+                        <button className="btn btn-ghost btn-icon btn-sm" onClick={() => loadClientEvents(c.id)} title="View events"
+                          style={{ color: expandedId === c.id ? 'var(--accent-light)' : undefined }}>
+                          {expandedId === c.id ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                        </button>
                         <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(c)} title="Edit"><Pencil size={13} /></button>
                         <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setConfirmId(c.id)} title="Delete" style={{ color: 'var(--red)' }}><Trash2 size={13} /></button>
                       </div>
                     </td>
                   </tr>
+                  {/* Event history row */}
+                  {expandedId === c.id && (
+                    <tr>
+                      <td colSpan={5} style={{ padding: 0, background: 'var(--bg-3)' }}>
+                        <div style={{ padding: '12px 18px' }}>
+                          <div style={{ fontSize: '0.72rem', fontFamily: 'Syne', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-3)', marginBottom: 8 }}>
+                            📅 Event History
+                          </div>
+                          {!clientEvents[c.id] ? (
+                            <div style={{ color: 'var(--text-3)', fontSize: '0.8rem' }}>Loading…</div>
+                          ) : clientEvents[c.id].length === 0 ? (
+                            <div style={{ color: 'var(--text-3)', fontSize: '0.8rem' }}>No events yet for this client</div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                              {clientEvents[c.id].map(ev => (
+                                <div key={ev.id} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.82rem' }}>
+                                  <span className={`badge ${getEventStatusBadge(ev.status)}`} style={{ fontSize: '0.65rem' }}>{ev.status}</span>
+                                  <span style={{ fontWeight: 600, flex: 1 }}>{ev.title}</span>
+                                  <span style={{ color: 'var(--text-3)' }}>{format(new Date(ev.event_date), 'dd MMM yyyy')}</span>
+                                  {ev.client_amount > 0 && (
+                                    <span style={{ color: 'var(--gold)', fontFamily: 'monospace', fontWeight: 600 }}>
+                                      ₹{ev.client_amount.toLocaleString('en-IN')}
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                              <div style={{ borderTop: '1px solid var(--border)', marginTop: 4, paddingTop: 6, display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem' }}>
+                                <span style={{ color: 'var(--text-3)' }}>{clientEvents[c.id].length} event{clientEvents[c.id].length !== 1 ? 's' : ''} total</span>
+                                <span style={{ color: 'var(--gold)', fontWeight: 700 }}>
+                                  Total: ₹{clientEvents[c.id].reduce((s, e) => s + (e.client_amount || 0), 0).toLocaleString('en-IN')}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                 ))}
               </tbody>
             </table>

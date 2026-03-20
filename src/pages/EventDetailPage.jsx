@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
-import { ArrowLeft, Plus, X, Loader2, MapPin, Phone, Trash2, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Plus, X, Loader2, MapPin, Phone, Trash2, CheckCircle, Pencil } from 'lucide-react'
 import { ITEM_TYPES, ITEM_PAY_TYPES, EVENT_STATUSES, getEventStatusBadge, getItemTypeEmoji } from '../lib/constants'
 import { format } from 'date-fns'
 
@@ -16,6 +16,7 @@ export default function EventDetailPage() {
   const [profiles, setProfiles] = useState([])
   const [machines, setMachines] = useState([])
   const [performers, setPerformers] = useState([])
+  const [trips, setTrips] = useState([])
   const [loading, setLoading] = useState(true)
   const [showItemModal, setShowItemModal] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -25,18 +26,20 @@ export default function EventDetailPage() {
 
   async function loadAll() {
     setLoading(true)
-    const [evRes, itemsRes, profilesRes, machinesRes, performersRes] = await Promise.all([
+    const [evRes, itemsRes, profilesRes, machinesRes, performersRes, tripsRes] = await Promise.all([
       supabase.from('events').select('*, clients(full_name, phone), venues(name, address, google_maps_url)').eq('id', id).single(),
       supabase.from('event_items').select('*, profiles(full_name, phone), machines(name), performers(full_name)').eq('event_id', id).order('created_at'),
       supabase.from('profiles').select('id, full_name, role, pay_rate, pay_type').order('full_name'),
       supabase.from('machines').select('id, name, category, status, godown').in('status', ['in_godown','at_event']).order('name'),
       supabase.from('performers').select('id, full_name, type, rate, rate_type').order('full_name'),
+      supabase.from('transport_trips').select('id, vehicle_type, amount, payment_status, pickup_location, drop_location').eq('event_id', id),
     ])
     setEvent(evRes.data)
     setItems(itemsRes.data || [])
     setProfiles(profilesRes.data || [])
     setMachines(machinesRes.data || [])
     setPerformers(performersRes.data || [])
+    setTrips(tripsRes.data || [])
     setLoading(false)
   }
 
@@ -46,35 +49,62 @@ export default function EventDetailPage() {
     else setItemForm(f => ({ ...f, assigned_profile_id: profileId }))
   }
 
+  function openEditItem(item) {
+    setEditingItem(item)
+    setItemForm({
+      item_type:           item.item_type,
+      description:         item.description,
+      assigned_profile_id: item.assigned_profile_id || '',
+      machine_id:          item.machine_id   || '',
+      performer_id:        item.performer_id  || '',
+      cost:                item.cost          || '',
+      pay_type:            item.pay_type      || 'fixed',
+      days:                item.days          || '1',
+      hours:               item.hours         || '',
+      notes:               item.notes         || '',
+    })
+    setShowItemModal(true)
+  }
+
   async function handleAddItem(e) {
     e.preventDefault()
     setSaving(true)
     const payload = {
-      event_id: id,
-      item_type: itemForm.item_type,
-      description: itemForm.description,
-      cost: parseFloat(itemForm.cost) || 0,
-      pay_type: itemForm.pay_type,
-      days: parseFloat(itemForm.days) || 1,
-      hours: parseFloat(itemForm.hours) || null,
-      notes: itemForm.notes,
-      payment_status: 'pending',
+      item_type:           itemForm.item_type,
+      description:         itemForm.description,
+      cost:                parseFloat(itemForm.cost) || 0,
+      pay_type:            itemForm.pay_type,
+      days:                parseFloat(itemForm.days) || 1,
+      hours:               parseFloat(itemForm.hours) || null,
+      notes:               itemForm.notes,
+      assigned_profile_id: itemForm.assigned_profile_id || null,
+      machine_id:          itemForm.machine_id   || null,
+      performer_id:        itemForm.performer_id  || null,
     }
-    if (itemForm.assigned_profile_id) payload.assigned_profile_id = itemForm.assigned_profile_id
-    if (itemForm.machine_id)  payload.machine_id  = itemForm.machine_id
-    if (itemForm.performer_id) payload.performer_id = itemForm.performer_id
-    const { error } = await supabase.from('event_items').insert(payload)
-    if (!error && itemForm.machine_id) {
-      // GAP 5: Auto-update machine status to 'at_event'
-      await supabase.from('machines')
-        .update({ status: 'at_event', current_event_id: id })
-        .eq('id', itemForm.machine_id)
+
+    if (editingItem) {
+      // ── EDIT existing item ──────────────────────────
+      const { error } = await supabase.from('event_items').update(payload).eq('id', editingItem.id)
+      setSaving(false)
+      if (error) { toast.error(error.message); return }
+      toast.success('Item updated!')
+    } else {
+      // ── ADD new item ────────────────────────────────
+      payload.event_id       = id
+      payload.payment_status = 'pending'
+      const { error } = await supabase.from('event_items').insert(payload)
+      if (!error && itemForm.machine_id) {
+        await supabase.from('machines')
+          .update({ status: 'at_event', current_event_id: id })
+          .eq('id', itemForm.machine_id)
+      }
+      setSaving(false)
+      if (error) { toast.error(error.message); return }
+      toast.success('Item added!')
     }
-    setSaving(false)
-    if (error) { toast.error(error.message); return }
-    toast.success('Item added!')
     setShowItemModal(false)
-    setItemForm({ item_type: ITEM_TYPES[2].value, description: '', assigned_profile_id: '', machine_id: '', performer_id: '', cost: '', pay_type: 'fixed', days: '1', hours: '', notes: '' })
+    setEditingItem(null)
+    setItemForm(emptyItemForm)
     loadAll()
   }
 
@@ -103,16 +133,28 @@ export default function EventDetailPage() {
   async function updateStatus(newStatus) {
     const { error } = await supabase.from('events').update({ status: newStatus }).eq('id', id)
     if (error) { toast.error(error.message); return }
-    toast.success(`Status: ${newStatus}`)
+    // Auto-revert machine status when event is completed or cancelled
+    if (newStatus === 'completed' || newStatus === 'cancelled') {
+      const machineItems = items.filter(i => i.machine_id)
+      for (const item of machineItems) {
+        await supabase.from('machines')
+          .update({ status: 'returned', current_event_id: null })
+          .eq('id', item.machine_id)
+      }
+      if (machineItems.length > 0) toast.success(`${machineItems.length} machine(s) marked as returned`)
+    }
+    toast.success(`Status updated to ${newStatus}`)
     loadAll()
   }
 
   if (loading) return <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-3)' }}><Loader2 className="spin" /></div>
   if (!event) return <div className="empty-state"><h3>Event not found</h3></div>
 
-  const totalCost = items.reduce((s, i) => s + (i.cost || 0), 0)
-  const totalPaid = items.reduce((s, i) => s + (i.amount_paid || 0), 0)
-  const profit = (event.client_amount || 0) - totalCost
+  const totalItemCost    = items.reduce((s, i) => s + (i.cost || 0), 0)
+  const totalTransportCost = trips.reduce((s, t) => s + (t.amount || 0), 0)
+  const totalCost        = totalItemCost + totalTransportCost
+  const totalPaid        = items.reduce((s, i) => s + (i.amount_paid || 0), 0)
+  const profit           = (event.client_amount || 0) - totalCost
 
   // STATUS_COLORS from constants
 
@@ -182,9 +224,15 @@ export default function EventDetailPage() {
               <span style={{ color: 'var(--green)', fontWeight: 600 }}>₹{(event.amount_received || 0).toLocaleString()}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-              <span style={{ color: 'var(--text-2)' }}>Total Costs</span>
-              <span style={{ color: 'var(--red)', fontWeight: 600 }}>₹{totalCost.toLocaleString()}</span>
+              <span style={{ color: 'var(--text-2)' }}>Staff / Items</span>
+              <span style={{ color: 'var(--red)', fontWeight: 600 }}>₹{totalItemCost.toLocaleString()}</span>
             </div>
+            {totalTransportCost > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                <span style={{ color: 'var(--text-2)' }}>Transport</span>
+                <span style={{ color: 'var(--red)', fontWeight: 600 }}>₹{totalTransportCost.toLocaleString()}</span>
+              </div>
+            )}
             <div style={{ borderTop: '1px solid var(--border)', marginTop: 4, paddingTop: 4, display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
               <span style={{ fontWeight: 700 }}>Net Profit</span>
               <span style={{ color: profit >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 700 }}>₹{profit.toLocaleString()}</span>
@@ -228,6 +276,7 @@ export default function EventDetailPage() {
                       {item.payment_status !== 'paid' && (
                         <button className="btn btn-ghost btn-icon btn-sm" onClick={() => markItemPaid(item)} title="Mark Paid"><CheckCircle size={13} /></button>
                       )}
+                      <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEditItem(item)} title="Edit item"><Pencil size={13} /></button>
                       <button className="btn btn-ghost btn-icon btn-sm" onClick={() => deleteItem(item.id)} title="Remove"><Trash2 size={13} style={{ color: 'var(--red)' }} /></button>
                     </div>
                   </td>
@@ -243,8 +292,8 @@ export default function EventDetailPage() {
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowItemModal(false)}>
           <div className="modal">
             <div className="modal-header">
-              <span className="modal-title">Add Item to Event</span>
-              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setShowItemModal(false)}><X size={16} /></button>
+              <span className="modal-title">{editingItem ? 'Edit Item' : 'Add Item to Event'}</span>
+              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => { setShowItemModal(false); setEditingItem(null); setItemForm(emptyItemForm) }}><X size={16} /></button>
             </div>
             <form onSubmit={handleAddItem}>
               <div className="form-row">
@@ -342,7 +391,7 @@ export default function EventDetailPage() {
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowItemModal(false)}>Cancel</button>
                 <button type="submit" className="btn btn-primary" disabled={saving}>
-                  {saving ? <Loader2 size={14} /> : <><Plus size={14} /> Add Item</>}
+                  {saving ? <Loader2 size={14} className="spin" /> : editingItem ? 'Save Changes' : <><Plus size={14} /> Add Item</>}
                 </button>
               </div>
             </form>

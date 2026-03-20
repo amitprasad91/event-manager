@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
-import { Loader2, CheckCircle, Phone, Wallet, User, CreditCard, Calendar, X } from 'lucide-react'
+import { Loader2, CheckCircle, Phone, Wallet, User, CreditCard, Calendar, X, Search, ChevronDown, ChevronRight } from 'lucide-react'
+import { startOfQuarter, endOfQuarter, subQuarters } from 'date-fns'
 import { logAudit } from '../lib/audit'
 import { COLORS, fmtRs, calcProgress, calcStaffDue, getItemTypeEmoji } from '../lib/constants'
 import { format, isThisQuarter } from 'date-fns'
@@ -46,7 +47,11 @@ export default function PaymentsPage() {
   const [eventItems, setEventItems] = useState([])
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState('collect')
+  const [tab, setTab]               = useState('collect')
+  const [search, setSearch]         = useState('')
+  const [quarterOffset, setQuarterOffset] = useState(0)  // 0=current, -1=last, -2=two ago
+  const [groupByPerson, setGroupByPerson] = useState(false)
+  const [expandedPerson, setExpandedPerson] = useState(null)
   const [updatingId, setUpdatingId] = useState(null)
   const [transportDues, setTransportDues] = useState([])
   const [profiles, setProfiles] = useState([])
@@ -119,7 +124,13 @@ export default function PaymentsPage() {
     loadAll()
   }
 
-  const qEvents = events.filter(e => isThisQuarter(new Date(e.event_date)))
+  const qStart  = startOfQuarter(subQuarters(new Date(), -quarterOffset))
+  const qEnd    = endOfQuarter(subQuarters(new Date(), -quarterOffset))
+  const qEvents = events.filter(e => {
+    const d = new Date(e.event_date)
+    return d >= qStart && d <= qEnd
+  })
+  const qLabel  = quarterOffset === 0 ? 'This Quarter' : quarterOffset === -1 ? 'Last Quarter' : `Q${Math.ceil((qStart.getMonth()+1)/3)} ${qStart.getFullYear()}`
   const totalRevenue   = qEvents.reduce((s,e) => s + (e.client_amount   || 0), 0)
   const totalCollected = qEvents.reduce((s,e) => s + (e.amount_received  || 0), 0)
   const totalPending   = totalRevenue - totalCollected
@@ -141,11 +152,28 @@ export default function PaymentsPage() {
 
       {/* Summary stats — 2x2 grid with colored cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(140px,1fr))', gap: 10, marginBottom: 24 }}>
-        <PayStat label="Total Billed"       icon="💼" value={fmtRs(totalRevenue)}   color="gold"  sub="This quarter" />
+        <PayStat label="Total Billed"       icon="💼" value={fmtRs(totalRevenue)}   color="gold"  sub={qLabel} />
         <PayStat label="Collected"          icon="✅" value={fmtRs(totalCollected)} color="green" sub="From clients" />
         <PayStat label="Pending Collection" icon="⏳" value={fmtRs(totalPending)}   color="red"   sub="Outstanding" />
         <PayStat label="Staff Dues"         icon="👷" value={fmtRs(totalStaffDue)}   color="blue"  sub="Event items" />
         <PayStat label="Transport Dues"      icon="🚛" value={fmtRs(totalTransportDue)} color="red"   sub="Driver payments" />
+      </div>
+
+      {/* Quarter selector + search */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div className="search-bar" style={{ flex: 1, minWidth: 180, marginBottom: 0 }}>
+          <Search size={15} />
+          <input placeholder="Search events or clients…" value={search}
+            onChange={e => setSearch(e.target.value)} />
+          {search && <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setSearch('')}><X size={13} /></button>}
+        </div>
+        <select className="form-select" style={{ width: 150 }} value={quarterOffset}
+          onChange={e => setQuarterOffset(parseInt(e.target.value))}>
+          <option value={0}>This Quarter</option>
+          <option value={-1}>Last Quarter</option>
+          <option value={-2}>2 Quarters Ago</option>
+          <option value={-3}>3 Quarters Ago</option>
+        </select>
       </div>
 
       {/* Tab switcher — pill style */}
@@ -158,6 +186,7 @@ export default function PaymentsPage() {
         {[
           ['collect', '💰', 'Collect from Clients'],
           ['pay',     '💸', 'Pay Staff / Vendors'],
+          ['mine',    '👤', 'My Dues'],
         ].map(([key, emoji, label]) => (
           <button key={key} onClick={() => setTab(key)}
             style={{
@@ -179,9 +208,15 @@ export default function PaymentsPage() {
       ) : tab === 'collect' ? (
         /* ── COLLECT FROM CLIENTS ── */
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {events.length === 0 ? (
+          {(() => {
+            const filteredEvs = qEvents.filter(ev => {
+              if (!search) return true
+              const q = search.toLowerCase()
+              return ev.title?.toLowerCase().includes(q) || ev.clients?.full_name?.toLowerCase().includes(q)
+            })
+            return filteredEvs.length === 0 ? (
             <div className="empty-state"><Wallet size={40} className="empty-state-icon" /><h3>No events yet</h3></div>
-          ) : events.map(ev => {
+          ) : filteredEvs.map(ev => {
             const billed   = ev.client_amount    || 0
             const received = ev.amount_received  || 0
             const pending  = billed - received
@@ -388,7 +423,78 @@ export default function PaymentsPage() {
             </div>
           </div>
         </div>
-      )}
+      ) : tab === 'mine' ? (
+        /* ── MY DUES — personal payment ledger ── */
+        <div>
+          {(() => {
+            const myItems = eventItems.filter(i => i.assigned_profile_id === profile?.id)
+            const myPaid  = myItems.filter(i => i.payment_status === 'paid')
+            const myDue   = myItems.filter(i => i.payment_status !== 'paid')
+            const totalEarned = myItems.reduce((s,i) => s + (i.cost||0), 0)
+            const totalReceived = myItems.reduce((s,i) => s + (i.amount_paid||0), 0)
+            return (
+              <div>
+                {/* Personal summary */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+                  <div style={{ background: 'rgba(16,212,160,0.08)', border: '1px solid rgba(16,212,160,0.2)', borderRadius: 12, padding: '14px 16px' }}>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontFamily: 'Syne', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Total Earned</div>
+                    <div style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '1.4rem', color: 'var(--green)' }}>{fmtRs(totalEarned)}</div>
+                  </div>
+                  <div style={{ background: 'rgba(255,92,122,0.08)', border: '1px solid rgba(255,92,122,0.2)', borderRadius: 12, padding: '14px 16px' }}>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontFamily: 'Syne', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Pending Due</div>
+                    <div style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '1.4rem', color: 'var(--red)' }}>{fmtRs(totalEarned - totalReceived)}</div>
+                  </div>
+                </div>
+                {myItems.length === 0 ? (
+                  <div className="empty-state">
+                    <Wallet size={40} className="empty-state-icon" />
+                    <h3>No assignments yet</h3>
+                    <p>You haven't been assigned to any events</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {myDue.length > 0 && (
+                      <div style={{ fontSize: '0.72rem', color: 'var(--red)', fontFamily: 'Syne', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
+                        ⏳ Pending Payment
+                      </div>
+                    )}
+                    {myDue.map(item => (
+                      <div key={item.id} style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ fontSize: '1rem' }}>{getItemTypeEmoji(item.item_type)}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{item.description}</div>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-3)', marginTop: 2 }}>{item.events?.title} · {item.events?.event_date ? format(new Date(item.events.event_date), 'dd MMM yyyy') : ''}</div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--red)', fontSize: '0.9rem' }}>{fmtRs((item.cost||0)-(item.amount_paid||0))}</div>
+                          <div style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>due</div>
+                        </div>
+                      </div>
+                    ))}
+                    {myPaid.length > 0 && (
+                      <>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--green)', fontFamily: 'Syne', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 8, marginBottom: 4 }}>
+                          ✅ Paid
+                        </div>
+                        {myPaid.map(item => (
+                          <div key={item.id} style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, opacity: 0.7 }}>
+                            <div style={{ fontSize: '1rem' }}>{getItemTypeEmoji(item.item_type)}</div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{item.description}</div>
+                              <div style={{ fontSize: '0.72rem', color: 'var(--text-3)', marginTop: 2 }}>{item.events?.title}</div>
+                            </div>
+                            <div style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--green)', fontSize: '0.9rem' }}>{fmtRs(item.amount_paid)}</div>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+        </div>
+      ) : null}
     </div>
   )
 }

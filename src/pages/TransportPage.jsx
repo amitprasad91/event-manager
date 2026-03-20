@@ -220,7 +220,9 @@ export default function TransportPage() {
   function openNew() {
     setEditing(null)
     setErrors({})
-    setForm(emptyForm)
+    // Auto-fill driver field if current user is a driver
+    const autoDriver = profile?.role === 'driver' ? profile?.id : ''
+    setForm({ ...emptyForm, driver_profile_id: autoDriver })
     setShowModal(true)
   }
 
