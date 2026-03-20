@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { canDo } from '../lib/permissions'
@@ -143,7 +143,8 @@ export default function ClientsPage() {
               </thead>
               <tbody>
                 {filtered.map(c => (
-                  <tr key={c.id}>
+                  <React.Fragment key={c.id}>
+                  <tr>
                     <td style={{ fontWeight: 600 }}>{c.full_name}</td>
                     <td>
                       {c.phone ? (
@@ -210,6 +211,7 @@ export default function ClientsPage() {
                       </td>
                     </tr>
                   )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>
