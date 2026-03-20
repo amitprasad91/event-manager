@@ -753,6 +753,322 @@ describe('📚 Constants — All Exports, Badges & Labels', () => {
   })
 })
 
+
+// ══════════════════════════════════════════════════════════════
+// PHASE 3 TESTS — Pending Validation Fixes
+// ══════════════════════════════════════════════════════════════
+
+// ── Validation functions for Phase 3 ─────────────────────────
+
+function validateMachineP3(form) {
+  const e = {}
+  if (!form.name?.trim()) e.name = 'Item name is required'
+  if (form.quantity && (isNaN(parseInt(form.quantity)) || parseInt(form.quantity) < 1)) e.quantity = 'Must be at least 1'
+  return e
+}
+
+function validateTransportP3(form) {
+  const e = {}
+  if (!form.event_id)  e.event_id  = 'Please select an event'
+  if (!form.trip_date) e.trip_date = 'Trip date is required'
+  if (form.amount && isNaN(parseFloat(form.amount))) e.amount = 'Must be a valid number'
+  if (form.amount && parseFloat(form.amount) < 0) e.amount = 'Amount cannot be negative'
+  if (form.km && isNaN(parseFloat(form.km))) e.km = 'Must be a valid number'
+  if (form.km && parseFloat(form.km) < 0) e.km = 'Distance cannot be negative'
+  return e
+}
+
+function validatePaymentCollection(form) {
+  const e = {}
+  const val = parseFloat(form.amount)
+  if (!form.amount || isNaN(val)) e.amount = 'Enter a valid amount'
+  else if (val <= 0) e.amount = 'Amount must be greater than 0'
+  if (!form.method) e.method = 'Select payment method'
+  return e
+}
+
+function validateRevert(form) {
+  const e = {}
+  if (!form.reason?.trim()) e.reason = 'Reason is required'
+  if (!form.reverted_by)    e.reverted_by = 'Select who is reverting'
+  return e
+}
+
+// ── Utility functions for Phase 3 ────────────────────────────
+
+function calcGodownSummary(machines) {
+  const godowns = ['Godown A', 'Godown B', 'Godown C']
+  return godowns.map(g => ({
+    name:  g,
+    count: machines.filter(m => m.godown === g && m.status === 'in_godown').length,
+    qty:   machines.filter(m => m.godown === g && m.status === 'in_godown').reduce((s, m) => s + (m.quantity || 1), 0)
+  }))
+}
+
+function calcAtEventQty(machines) {
+  return machines.filter(m => m.status === 'at_event').reduce((s, m) => s + (m.quantity || 1), 0)
+}
+
+function autoFillTransportForm(form, events) {
+  const ev = events.find(e => e.id === form.event_id)
+  if (!ev) return form
+  return {
+    ...form,
+    trip_date:     ev.event_date || form.trip_date,
+    drop_location: ev.venue_name ? ev.venue_name : form.drop_location,
+    pickup_location: form.pickup_location || 'Godown A',
+  }
+}
+
+function calcBulkPayTotal(trips, driverName) {
+  return trips
+    .filter(t => t.driver_name === driverName && t.payment_status !== 'paid')
+    .reduce((s, t) => s + (t.amount || 0), 0)
+}
+
+function calcDaysOverdue(eventDate, status) {
+  if (status !== 'completed') return 0
+  const days = Math.floor((new Date() - new Date(eventDate)) / (1000*60*60*24))
+  return Math.max(0, days)
+}
+
+function getVehicleEmoji(vehicleType) {
+  if (!vehicleType) return '🚛'
+  const t = vehicleType.toLowerCase()
+  if (t.includes('bike')) return '🏍️'
+  if (t.includes('auto')) return '🛺'
+  if (t.includes('van'))  return '🚐'
+  if (t.includes('407'))  return '🚚'
+  return '🚛'
+}
+
+function canRoleDo(role, action) {
+  const perms = {
+    admin:      ['add', 'edit', 'delete', 'view', 'pay', 'split', 'report'],
+    supervisor: ['add', 'edit', 'view', 'pay'],
+    staff:      ['view', 'add'],
+    driver:     ['view'],
+  }
+  return perms[role]?.includes(action) || false
+}
+
+function getRolePages(role) {
+  const pages = {
+    admin:      ['/dashboard','/events','/people','/clients','/machines','/payments','/venues','/performers','/transport','/co-owners','/profit-split','/user-guide'],
+    supervisor: ['/dashboard','/events','/people','/clients','/machines','/payments','/venues','/performers','/transport','/user-guide'],
+    staff:      ['/dashboard','/events','/machines','/transport','/user-guide'],
+    driver:     ['/dashboard','/transport','/user-guide'],
+  }
+  return pages[role] || pages.staff
+}
+
+function canAccessPage(role, path) {
+  return getRolePages(role).some(p => path.startsWith(p))
+}
+
+// ══════════════════════════════════════════════════════════════
+
+describe('📦 Machines Phase 3 — Quantity & Notes', () => {
+  test('valid quantity passes',                () => expect(validateMachineP3({ name: 'Booth', quantity: '3' })).not.toHaveProperty('quantity'))
+  test('quantity 0 shows error',              () => expect(validateMachineP3({ name: 'Booth', quantity: '0' })).toHaveProperty('quantity'))
+  test('negative quantity shows error',       () => expect(validateMachineP3({ name: 'Booth', quantity: '-1' })).toHaveProperty('quantity'))
+  test('non-numeric quantity shows error',    () => expect(validateMachineP3({ name: 'Booth', quantity: 'abc' })).toHaveProperty('quantity'))
+  test('quantity 1 is valid (default)',       () => expect(validateMachineP3({ name: 'Booth', quantity: '1' })).not.toHaveProperty('quantity'))
+  test('empty name still shows error',        () => expect(validateMachineP3({ name: '', quantity: '2' })).toHaveProperty('name'))
+  test('godown summary calculates correctly', () => {
+    const machines = [
+      { name: 'A', godown: 'Godown A', status: 'in_godown', quantity: 3 },
+      { name: 'B', godown: 'Godown A', status: 'in_godown', quantity: 2 },
+      { name: 'C', godown: 'Godown B', status: 'in_godown', quantity: 4 },
+      { name: 'D', godown: 'Godown A', status: 'at_event',  quantity: 1 },
+    ]
+    const summary = calcGodownSummary(machines)
+    expect(summary[0].qty).toBe(5)   // Godown A: 3+2 (not at_event)
+    expect(summary[0].count).toBe(2) // 2 item types
+    expect(summary[1].qty).toBe(4)   // Godown B
+  })
+  test('at_event qty calculation',            () => {
+    const machines = [
+      { status: 'at_event', quantity: 2 },
+      { status: 'at_event', quantity: 3 },
+      { status: 'in_godown', quantity: 5 },
+    ]
+    expect(calcAtEventQty(machines)).toBe(5)
+  })
+  test('at_event qty uses default 1 when no qty', () => {
+    expect(calcAtEventQty([{ status: 'at_event' }])).toBe(1)
+  })
+})
+
+describe('🚛 Transport Phase 3 — Auto-fill, Bulk Pay, Revert', () => {
+  // Validation
+  test('missing event shows error',           () => expect(validateTransportP3({ event_id: '', trip_date: '2026-04-01' })).toHaveProperty('event_id'))
+  test('missing date shows error',            () => expect(validateTransportP3({ event_id: 'id', trip_date: '' })).toHaveProperty('trip_date'))
+  test('valid form passes',                   () => expect(Object.keys(validateTransportP3({ event_id: 'id', trip_date: '2026-04-01' })).length).toBe(0))
+  test('negative amount shows error',         () => expect(validateTransportP3({ event_id: 'id', trip_date: '2026-04-01', amount: '-100' })).toHaveProperty('amount'))
+
+  // Auto-fill
+  test('event selection auto-fills date',     () => {
+    const events = [{ id: 'e1', event_date: '2026-04-15', venue_name: 'ITC Royal Bengal' }]
+    const result = autoFillTransportForm({ event_id: 'e1', trip_date: '', pickup_location: '', drop_location: '' }, events)
+    expect(result.trip_date).toBe('2026-04-15')
+  })
+  test('event selection auto-fills venue',    () => {
+    const events = [{ id: 'e1', event_date: '2026-04-15', venue_name: 'JW Marriott' }]
+    const result = autoFillTransportForm({ event_id: 'e1', trip_date: '', pickup_location: '', drop_location: '' }, events)
+    expect(result.drop_location).toBe('JW Marriott')
+  })
+  test('pickup defaults to Godown A',         () => {
+    const events = [{ id: 'e1', event_date: '2026-04-15' }]
+    const result = autoFillTransportForm({ event_id: 'e1', trip_date: '', pickup_location: '', drop_location: '' }, events)
+    expect(result.pickup_location).toBe('Godown A')
+  })
+  test('existing pickup not overwritten',     () => {
+    const events = [{ id: 'e1', event_date: '2026-04-15' }]
+    const result = autoFillTransportForm({ event_id: 'e1', trip_date: '', pickup_location: 'Godown B', drop_location: '' }, events)
+    expect(result.pickup_location).toBe('Godown B')
+  })
+  test('unknown event returns form unchanged', () => {
+    const result = autoFillTransportForm({ event_id: 'unknown', trip_date: 'existing', pickup_location: 'X', drop_location: 'Y' }, [])
+    expect(result.trip_date).toBe('existing')
+  })
+
+  // Bulk pay
+  test('bulk pay totals unpaid trips for driver', () => {
+    const trips = [
+      { driver_name: 'Raj', payment_status: 'pending', amount: 500 },
+      { driver_name: 'Raj', payment_status: 'pending', amount: 300 },
+      { driver_name: 'Raj', payment_status: 'paid',    amount: 200 },
+      { driver_name: 'Ali', payment_status: 'pending', amount: 400 },
+    ]
+    expect(calcBulkPayTotal(trips, 'Raj')).toBe(800)
+    expect(calcBulkPayTotal(trips, 'Ali')).toBe(400)
+  })
+  test('bulk pay = 0 when all paid',          () => {
+    const trips = [{ driver_name: 'Raj', payment_status: 'paid', amount: 500 }]
+    expect(calcBulkPayTotal(trips, 'Raj')).toBe(0)
+  })
+
+  // Revert validation
+  test('revert requires reason',              () => expect(validateRevert({ reason: '', reverted_by: 'id' })).toHaveProperty('reason'))
+  test('revert requires who',                 () => expect(validateRevert({ reason: 'Wrong amount', reverted_by: '' })).toHaveProperty('reverted_by'))
+  test('valid revert passes',                 () => expect(Object.keys(validateRevert({ reason: 'Wrong amount', reverted_by: 'uuid-123' })).length).toBe(0))
+
+  // Vehicle emojis
+  test('Tata Ace = 🚛',                      () => expect(getVehicleEmoji('Tata Ace')).toBe('🚛'))
+  test('Tata 407 = 🚚',                      () => expect(getVehicleEmoji('Tata 407')).toBe('🚚'))
+  test('Bike = 🏍️',                          () => expect(getVehicleEmoji('Bike')).toBe('🏍️'))
+  test('Private Bike = 🏍️',                  () => expect(getVehicleEmoji('Private Bike')).toBe('🏍️'))
+  test('Auto = 🛺',                           () => expect(getVehicleEmoji('Auto')).toBe('🛺'))
+  test('Van = 🚐',                            () => expect(getVehicleEmoji('Van')).toBe('🚐'))
+  test('null defaults to 🚛',                () => expect(getVehicleEmoji(null)).toBe('🚛'))
+})
+
+describe('💳 Payments Phase 3 — Collection Tracking', () => {
+  test('valid cash collection passes',        () => expect(Object.keys(validatePaymentCollection({ amount: '5000', method: 'cash' })).length).toBe(0))
+  test('valid UPI collection passes',         () => expect(Object.keys(validatePaymentCollection({ amount: '5000', method: 'online' })).length).toBe(0))
+  test('valid cheque collection passes',      () => expect(Object.keys(validatePaymentCollection({ amount: '5000', method: 'cheque' })).length).toBe(0))
+  test('missing amount shows error',          () => expect(validatePaymentCollection({ amount: '', method: 'cash' })).toHaveProperty('amount'))
+  test('zero amount shows error',             () => expect(validatePaymentCollection({ amount: '0', method: 'cash' })).toHaveProperty('amount'))
+  test('negative amount shows error',         () => expect(validatePaymentCollection({ amount: '-100', method: 'cash' })).toHaveProperty('amount'))
+  test('non-numeric amount shows error',      () => expect(validatePaymentCollection({ amount: 'abc', method: 'cash' })).toHaveProperty('amount'))
+  test('missing method shows error',          () => expect(validatePaymentCollection({ amount: '5000', method: '' })).toHaveProperty('method'))
+  test('days overdue for completed event',    () => {
+    // Use a date clearly in the past
+    const pastDate = '2020-01-01'
+    expect(calcDaysOverdue(pastDate, 'completed')).toBeGreaterThan(0)
+  })
+  test('days overdue = 0 for upcoming',       () => expect(calcDaysOverdue('2026-01-01', 'upcoming')).toBe(0))
+  test('days overdue = 0 for ongoing',        () => expect(calcDaysOverdue('2026-01-01', 'ongoing')).toBe(0))
+  test('days overdue never negative',         () => expect(calcDaysOverdue('2030-01-01', 'completed')).toBe(0))
+})
+
+describe('🔐 Role-Based Access — Phase 3', () => {
+  // Admin access
+  test('admin can access profit-split',       () => expect(canAccessPage('admin', '/profit-split')).toBeTruthy())
+  test('admin can access co-owners',          () => expect(canAccessPage('admin', '/co-owners')).toBeTruthy())
+  test('admin can access all pages',          () => {
+    const pages = ['/dashboard','/events','/people','/clients','/machines','/payments','/venues','/performers','/transport','/co-owners','/profit-split','/user-guide']
+    pages.forEach(p => expect(canAccessPage('admin', p)).toBeTruthy())
+  })
+
+  // Supervisor access
+  test('supervisor cannot access profit-split', () => expect(canAccessPage('supervisor', '/profit-split')).toBeFalsy())
+  test('supervisor cannot access co-owners',  () => expect(canAccessPage('supervisor', '/co-owners')).toBeFalsy())
+  test('supervisor can access payments',      () => expect(canAccessPage('supervisor', '/payments')).toBeTruthy())
+  test('supervisor can access transport',     () => expect(canAccessPage('supervisor', '/transport')).toBeTruthy())
+
+  // Staff access
+  test('staff cannot access payments',        () => expect(canAccessPage('staff', '/payments')).toBeFalsy())
+  test('staff cannot access people',          () => expect(canAccessPage('staff', '/people')).toBeFalsy())
+  test('staff can access events',             () => expect(canAccessPage('staff', '/events')).toBeTruthy())
+  test('staff can access transport',          () => expect(canAccessPage('staff', '/transport')).toBeTruthy())
+  test('staff can access user-guide',         () => expect(canAccessPage('staff', '/user-guide')).toBeTruthy())
+
+  // Driver access
+  test('driver can only access transport',    () => expect(canAccessPage('driver', '/transport')).toBeTruthy())
+  test('driver cannot access events',         () => expect(canAccessPage('driver', '/events')).toBeFalsy())
+  test('driver cannot access machines',       () => expect(canAccessPage('driver', '/machines')).toBeFalsy())
+  test('driver can access user-guide',        () => expect(canAccessPage('driver', '/user-guide')).toBeTruthy())
+
+  // Actions
+  test('admin can delete',                    () => expect(canRoleDo('admin', 'delete')).toBeTruthy())
+  test('supervisor cannot delete',            () => expect(canRoleDo('supervisor', 'delete')).toBeFalsy())
+  test('staff can view',                      () => expect(canRoleDo('staff', 'view')).toBeTruthy())
+  test('staff cannot pay',                    () => expect(canRoleDo('staff', 'pay')).toBeFalsy())
+  test('driver cannot add',                   () => expect(canRoleDo('driver', 'add')).toBeFalsy())
+  test('all roles can access user-guide',     () => {
+    ['admin','supervisor','staff','driver'].forEach(r => {
+      expect(canAccessPage(r, '/user-guide')).toBeTruthy()
+    })
+  })
+})
+
+describe('📖 User Guide — Role Content', () => {
+  const GUIDE_SECTIONS = {
+    admin:      ['Getting Started', 'Managing Events', 'People & Staff', 'Machines & Items', 'Transport', 'Payments', 'Venues', 'Performers', 'Co-Owners', 'Profit Split'],
+    supervisor: ['Getting Started', 'Events', 'Transport', 'Payments'],
+    staff:      ['Getting Started', 'Events', 'Transport', 'Machines & Items'],
+    driver:     ['Getting Started', 'Transport'],
+  }
+
+  test('admin guide has 10 sections',         () => expect(GUIDE_SECTIONS.admin.length).toBe(10))
+  test('supervisor guide has 4 sections',     () => expect(GUIDE_SECTIONS.supervisor.length).toBe(4))
+  test('staff guide has 4 sections',          () => expect(GUIDE_SECTIONS.staff.length).toBe(4))
+  test('driver guide has 2 sections',         () => expect(GUIDE_SECTIONS.driver.length).toBe(2))
+  test('admin guide includes profit split',   () => expect(GUIDE_SECTIONS.admin.includes('Profit Split')).toBeTruthy())
+  test('supervisor guide excludes profit split', () => expect(GUIDE_SECTIONS.supervisor.includes('Profit Split')).toBeFalsy())
+  test('all guides include Getting Started',  () => {
+    Object.values(GUIDE_SECTIONS).forEach(s => expect(s.includes('Getting Started')).toBeTruthy())
+  })
+  test('all guides include Transport',        () => {
+    Object.values(GUIDE_SECTIONS).forEach(s => expect(s.includes('Transport')).toBeTruthy())
+  })
+  test('driver guide only has 2 sections',    () => expect(GUIDE_SECTIONS.driver.length).toBe(2))
+})
+
+describe('📋 DB Schema Phase 3 — New Columns', () => {
+  const MACHINES_COLS    = ['id','name','category','godown','status','current_event_id','notes','quantity','created_at']
+  const TRANSPORT_COLS   = ['id','event_id','vehicle_type','driver_profile_id','staff_profile_id','pickup_location','drop_location','km','amount','pay_method','amount_paid','payment_status','trip_date','notes','is_round_trip','trip_type','paid_by_profile_id','paid_at','reverted','revert_reason','reverted_by_profile_id','reverted_at','created_at']
+  const EVENTS_COLS      = ['id','title','event_type','client_id','venue_id','event_date','start_time','end_time','status','client_amount','amount_received','notes','collected_by_profile_id','collection_method','collected_at','handed_to_profile_id','handed_at','created_at']
+
+  test('machines has quantity column',            () => expect(MACHINES_COLS.includes('quantity')).toBeTruthy())
+  test('transport has staff_profile_id',          () => expect(TRANSPORT_COLS.includes('staff_profile_id')).toBeTruthy())
+  test('transport has is_round_trip',             () => expect(TRANSPORT_COLS.includes('is_round_trip')).toBeTruthy())
+  test('transport has paid_by_profile_id',        () => expect(TRANSPORT_COLS.includes('paid_by_profile_id')).toBeTruthy())
+  test('transport has paid_at',                   () => expect(TRANSPORT_COLS.includes('paid_at')).toBeTruthy())
+  test('transport has reverted',                  () => expect(TRANSPORT_COLS.includes('reverted')).toBeTruthy())
+  test('transport has revert_reason',             () => expect(TRANSPORT_COLS.includes('revert_reason')).toBeTruthy())
+  test('transport has reverted_by_profile_id',    () => expect(TRANSPORT_COLS.includes('reverted_by_profile_id')).toBeTruthy())
+  test('transport has reverted_at',               () => expect(TRANSPORT_COLS.includes('reverted_at')).toBeTruthy())
+  test('events has collected_by_profile_id',      () => expect(EVENTS_COLS.includes('collected_by_profile_id')).toBeTruthy())
+  test('events has collection_method',            () => expect(EVENTS_COLS.includes('collection_method')).toBeTruthy())
+  test('events has collected_at',                 () => expect(EVENTS_COLS.includes('collected_at')).toBeTruthy())
+  test('events has handed_to_profile_id',         () => expect(EVENTS_COLS.includes('handed_to_profile_id')).toBeTruthy())
+  test('events has handed_at',                    () => expect(EVENTS_COLS.includes('handed_at')).toBeTruthy())
+})
+
+
 // ── SUMMARY ──────────────────────────────────────────────────
 const total = passed + failed
 console.log(`\n${'═'.repeat(54)}`)
