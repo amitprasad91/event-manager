@@ -142,7 +142,7 @@ export default function MachinesPage() {
           <div className="page-title">Machines & Items</div>
           <div className="page-subtitle">{machines.length} items tracked</div>
         </div>
-        {canDo(role, 'add') && <button className="btn btn-primary" onClick={openNew}><Plus size={14} /> Add Item</button>
+        {canDo(role, 'add') && <button className="btn btn-primary" onClick={openNew}><Plus size={14} /> Add Item</button>}
       </div>
 
       {/* Issue #8: Godown summary cards */}

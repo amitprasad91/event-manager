@@ -121,7 +121,7 @@ export default function VenuesPage() {
           <div className="page-title">Venues</div>
           <div className="page-subtitle">{venues.length} venues · Tap 📍 to navigate</div>
         </div>
-        {canDo(role, 'add') && <button className="btn btn-primary" onClick={openNew}><Plus size={14} /> Add Venue</button>
+        {canDo(role, 'add') && <button className="btn btn-primary" onClick={openNew}><Plus size={14} /> Add Venue</button>}
       </div>
 
       <div className="search-bar">

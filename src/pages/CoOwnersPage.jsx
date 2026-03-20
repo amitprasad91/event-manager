@@ -124,7 +124,7 @@ export default function CoOwnersPage() {
           <div className="page-title">Co-Owners</div>
           <div className="page-subtitle">{owners.length} partners · Total pool {fmtRs(totalPool)}</div>
         </div>
-        {canDo(role, 'add') && <button className="btn btn-primary" onClick={openNew}><Plus size={14} /> Add Co-owner</button>
+        {canDo(role, 'add') && <button className="btn btn-primary" onClick={openNew}><Plus size={14} /> Add Co-owner</button>}
       </div>
 
       <div className="search-bar">

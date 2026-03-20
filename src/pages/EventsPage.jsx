@@ -274,7 +274,7 @@ export default function EventsPage() {
               display: 'flex', alignItems: 'center', gap: 5,
             }}><CalendarDays size={13} /> Calendar</button>
           </div>
-          {canDo(role, 'add') && <button className="btn btn-primary" onClick={openNew}><Plus size={15} /> New Event</button>
+          {canDo(role, 'add') && <button className="btn btn-primary" onClick={openNew}><Plus size={15} /> New Event</button>}
         </div>
       </div>
 

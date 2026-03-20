@@ -120,7 +120,7 @@ export default function ClientsPage() {
           <div className="page-title">Clients</div>
           <div className="page-subtitle">{clients.length} clients</div>
         </div>
-        {canDo(role, 'add') && <button className="btn btn-primary" onClick={openNew}><Plus size={15} /> Add Client</button>
+        {canDo(role, 'add') && <button className="btn btn-primary" onClick={openNew}><Plus size={15} /> Add Client</button>}
       </div>
 
       <div className="search-bar">

@@ -117,7 +117,7 @@ export default function PerformersPage() {
           <div className="page-title">Performers & Artists</div>
           <div className="page-subtitle">{performers.length} in directory</div>
         </div>
-        {canDo(role, 'add') && <button className="btn btn-primary" onClick={openNew}><Plus size={14} /> Add Performer</button>
+        {canDo(role, 'add') && <button className="btn btn-primary" onClick={openNew}><Plus size={14} /> Add Performer</button>}
       </div>
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
