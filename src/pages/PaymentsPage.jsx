@@ -298,7 +298,7 @@ export default function PaymentsPage() {
             )
           })}
         </div>
-      ) : (
+      ) : tab === 'pay' ? (
         /* ── PAY STAFF / VENDORS ── */
         <div>
           {unpaidItems.length === 0 ? (
