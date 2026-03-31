@@ -5,6 +5,19 @@ Format: `[version] YYYY-MM-DD — Summary`
 
 ---
 
+## [0.3.1] 2026-03-31 — Sign Out Fix
+
+### PR #7 · `fix(signout)` — Sign Out button clearly labelled and always visible
+- **Root cause**: Sign Out was the entire user-pill (avatar + name + role) with only a tiny 14px `LogOut` icon at 25% opacity — users could not identify it as a clickable sign-out action
+- Separated user info display (non-interactive `.user-pill`) from a dedicated `Sign Out` button (`.sidebar-action.logout`)
+- New Sign Out button uses the existing `.sidebar-action.logout` style — red label, red hover state, clearly labelled with text
+- Removed the now-unused `.user-signout-btn` CSS class
+- Updated light-mode override for `.user-pill` display only
+- `src/version.js`: `202603.31.01` → `202603.31.02`
+- `package.json`: `0.3.0` → `0.3.1`
+
+---
+
 ## [0.3.0] 2026-03-31 — Design System Overhaul
 
 ### PR #6 · `redesign(login)` — Login page complete redesign
