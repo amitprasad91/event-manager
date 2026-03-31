@@ -891,8 +891,47 @@ h1, h2, h3, .page-title, .card-title, .modal-title, .nav-section-label {
 [data-theme="dark"] .user-role             { color: rgba(168,189,216,0.58); }
 
 /* ══════════════════════════════════════════════════════════════
+   LIGHT THEME — SIDEBAR overrides
+   Sidebar becomes warm white in light mode
+══════════════════════════════════════════════════════════════ */
+[data-theme="light"] .sidebar {
+  background: var(--bg-2);
+  border-right: 1px solid var(--border);
+}
+[data-theme="light"] .sidebar-logo          { border-bottom-color: var(--border); }
+[data-theme="light"] .brand-text-main       { color: var(--text); }
+[data-theme="light"] .brand-text-sub        { color: var(--text-3); }
+[data-theme="light"] .nav-section-label     { color: var(--text-3); }
+[data-theme="light"] .nav-item              { color: var(--text-2); }
+[data-theme="light"] .nav-item:hover        { background: var(--bg-3); color: var(--text); border-color: transparent; }
+[data-theme="light"] .nav-item.active       {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-color: var(--accent-glow);
+}
+[data-theme="light"] .nav-item svg          { color: var(--text-3); }
+[data-theme="light"] .nav-item.active svg   { color: var(--accent); }
+[data-theme="light"] .sidebar-footer        { border-top-color: var(--border); }
+[data-theme="light"] .sidebar-divider       { background: var(--border); }
+[data-theme="light"] .sidebar-action        { color: var(--text-2); }
+[data-theme="light"] .sidebar-action:hover  { background: var(--bg-3); color: var(--text); border-color: var(--border); }
+[data-theme="light"] .sidebar-action.install        { color: var(--gold); }
+[data-theme="light"] .sidebar-action.install:hover  { background: var(--gold-dim); border-color: var(--gold-dim); }
+[data-theme="light"] .sidebar-action.logout         { color: var(--red); }
+[data-theme="light"] .sidebar-action.logout:hover   { background: var(--red-dim); border-color: rgba(220,36,82,0.2); }
+[data-theme="light"] .user-pill             { background: var(--bg-3); border-color: var(--border); }
+[data-theme="light"] .user-name             { color: var(--text); }
+[data-theme="light"] .user-role             { color: var(--text-3); }
+[data-theme="light"] .version-badge-btn     { color: var(--text-3); }
+[data-theme="light"] .user-signout-btn      { background: var(--bg-3); border-color: var(--border); }
+[data-theme="light"] .user-signout-btn:hover {
+  background: var(--red-dim);
+  border-color: rgba(220,36,82,0.2);
+}
+[data-theme="light"] .logout-icon           { color: var(--text-3); }
+
+/* ══════════════════════════════════════════════════════════════
    LIGHT THEME — comprehensive component overrides
-   Sidebar stays dark (brand identity), everything else is warm
 ══════════════════════════════════════════════════════════════ */
 
 /* Form inputs */

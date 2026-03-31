@@ -1,13 +1,16 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useTheme } from '../context/ThemeContext'
 import toast from 'react-hot-toast'
 import { Loader2, Mail, Lock } from 'lucide-react'
 import { APP_VERSION, BUILD_DATE } from '../version.js'
 
 export default function LoginPage() {
   const { signIn }  = useAuth()
+  const { theme }   = useTheme()
   const navigate    = useNavigate()
+  const isDark      = theme === 'dark'
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading]   = useState(false)
@@ -75,25 +78,28 @@ export default function LoginPage() {
       {/* ── Page shell ── */}
       <div style={{
         minHeight:'100vh', display:'flex',
-        background:'#0d0818', overflow:'hidden', position:'relative',
+        background: isDark ? '#0d0818' : '#f6f4ef',
+        overflow:'hidden', position:'relative',
       }}>
 
         {/* Background radial glows */}
         <div style={{
           position:'absolute', inset:0, zIndex:0, pointerEvents:'none',
-          background:`
-            radial-gradient(ellipse 80% 60% at 20% 0%,   rgba(108,63,255,.22)  0%,transparent 60%),
-            radial-gradient(ellipse 60% 50% at 85% 85%,  rgba(240,120,10,.18)  0%,transparent 55%),
-            radial-gradient(ellipse 50% 70% at 0%  55%,  rgba(180,20,80,.15)   0%,transparent 55%),
-            radial-gradient(ellipse 40% 40% at 60% 40%,  rgba(30,100,220,.12)  0%,transparent 50%)
-          `,
+          background: isDark
+            ? `radial-gradient(ellipse 80% 60% at 20% 0%,   rgba(108,63,255,.22)  0%,transparent 60%),
+               radial-gradient(ellipse 60% 50% at 85% 85%,  rgba(240,120,10,.18)  0%,transparent 55%),
+               radial-gradient(ellipse 50% 70% at 0%  55%,  rgba(180,20,80,.15)   0%,transparent 55%),
+               radial-gradient(ellipse 40% 40% at 60% 40%,  rgba(30,100,220,.12)  0%,transparent 50%)`
+            : `radial-gradient(ellipse 70% 55% at 20% 10%,  rgba(184,120,16,.10)  0%,transparent 65%),
+               radial-gradient(ellipse 50% 45% at 85% 80%,  rgba(92,84,238,.07)   0%,transparent 60%),
+               radial-gradient(ellipse 40% 50% at 5%  60%,  rgba(220,36,82,.05)   0%,transparent 55%)`,
         }}/>
 
         {/* Top garland bar */}
         <div style={{
           position:'absolute',top:0,left:0,right:0,height:3,zIndex:5,
           background:'linear-gradient(90deg,transparent,#c8860a 15%,#f0b429 35%,#ff8c42 50%,#f0b429 65%,#c8860a 85%,transparent)',
-          opacity:.7,
+          opacity: isDark ? .7 : .5,
         }}/>
         {/* Bottom bar */}
         <div style={{
@@ -111,16 +117,16 @@ export default function LoginPage() {
         )}
 
         {/* Floating diyas */}
-        <span className="diya" style={{top:'7%', left:'5%',  animationDelay:'0s'  }}>🪔</span>
-        <span className="diya" style={{top:'12%',right:'6%', animationDelay:'1s'  }}>🪔</span>
-        <span className="diya" style={{bottom:'10%',left:'4%',animationDelay:'2s' }}>🪔</span>
-        <span className="diya" style={{bottom:'7%', right:'5%',animationDelay:'.5s'}}>🪔</span>
+        <span className="diya" style={{top:'7%', left:'5%',  animationDelay:'0s',   opacity: isDark?1:.55}}>🪔</span>
+        <span className="diya" style={{top:'12%',right:'6%', animationDelay:'1s',   opacity: isDark?1:.55}}>🪔</span>
+        <span className="diya" style={{bottom:'10%',left:'4%',animationDelay:'2s',  opacity: isDark?1:.55}}>🪔</span>
+        <span className="diya" style={{bottom:'7%', right:'5%',animationDelay:'.5s',opacity: isDark?1:.55}}>🪔</span>
 
         {/* Twinkling stars */}
-        <span className="star" style={{top:'5%', left:'18%', animationDelay:'0s'  }}>✦</span>
-        <span className="star" style={{top:'22%',right:'10%',animationDelay:'.7s' }}>✦</span>
-        <span className="star" style={{bottom:'18%',left:'12%',animationDelay:'1.4s'}}>✦</span>
-        <span className="star" style={{bottom:'30%',right:'8%',animationDelay:'.3s'}}>✦</span>
+        <span className="star" style={{top:'5%', left:'18%', animationDelay:'0s',   opacity: isDark?.8:.35}}>✦</span>
+        <span className="star" style={{top:'22%',right:'10%',animationDelay:'.7s',  opacity: isDark?.8:.35}}>✦</span>
+        <span className="star" style={{bottom:'18%',left:'12%',animationDelay:'1.4s',opacity:isDark?.8:.35}}>✦</span>
+        <span className="star" style={{bottom:'30%',right:'8%',animationDelay:'.3s',opacity: isDark?.8:.35}}>✦</span>
 
         {/* ════════════════ LEFT — Login card ════════════════ */}
         <div style={{
@@ -131,18 +137,23 @@ export default function LoginPage() {
           <div className="login-wrap" style={{ width:'100%', maxWidth:400 }}>
 
             <div className="login-card-anim" style={{
-              background:'rgba(13,8,26,.95)',
-              border:'1px solid rgba(240,180,41,.25)',
+              background: isDark ? 'rgba(13,8,26,.95)' : '#ffffff',
+              border: isDark ? '1px solid rgba(240,180,41,.25)' : '1px solid rgba(184,120,16,.28)',
               borderRadius:20,
               padding:'32px 28px 24px',
               backdropFilter:'blur(20px)',
               position:'relative', overflow:'hidden',
+              boxShadow: isDark
+                ? '0 24px 80px rgba(0,0,0,.6)'
+                : '0 8px 40px rgba(0,0,0,.10)',
             }}>
 
               {/* Card top shimmer line */}
               <div style={{
                 position:'absolute',top:0,left:28,right:28,height:1,
-                background:'linear-gradient(90deg,transparent,rgba(240,180,41,.65),rgba(255,140,66,.4),transparent)',
+                background: isDark
+                  ? 'linear-gradient(90deg,transparent,rgba(240,180,41,.65),rgba(255,140,66,.4),transparent)'
+                  : 'linear-gradient(90deg,transparent,rgba(184,120,16,.45),rgba(240,140,16,.3),transparent)',
               }}/>
 
               {/* Corner sparkles */}
@@ -178,17 +189,17 @@ export default function LoginPage() {
                   display:'inline-flex', alignItems:'center', gap:5, marginTop:8,
                   background:'rgba(240,180,41,.06)', border:'1px solid rgba(240,180,41,.14)',
                   borderRadius:100, padding:'3px 12px',
-                  fontSize:'.58rem', color:'rgba(255,255,255,.35)',
+                  fontSize:'.58rem', color: isDark ? 'rgba(255,255,255,.35)' : '#978f86',
                   letterSpacing:'.2em', textTransform:'uppercase',
                   fontFamily:'DM Sans,sans-serif',
                 }}>
                   <span style={{width:4,height:4,borderRadius:'50%',background:'#f0b429',display:'inline-block',boxShadow:'0 0 5px #f0b429'}}/>
                   Kolkata
                 </div>
-                <div style={{ fontSize:'.65rem', color:'rgba(255,255,255,.18)', marginTop:7, fontStyle:'italic' }}>
+                <div style={{ fontSize:'.65rem', color: isDark ? 'rgba(255,255,255,.18)' : '#c4bdb0', marginTop:7, fontStyle:'italic' }}>
                   Event Management & Rentals
                 </div>
-                <div style={{ fontSize:'.65rem', color:'rgba(240,180,41,.25)', marginTop:8, letterSpacing:'.2em' }}>
+                <div style={{ fontSize:'.65rem', color:'rgba(184,120,16,.4)', marginTop:8, letterSpacing:'.2em' }}>
                   ── ✦ ──
                 </div>
               </div>
@@ -201,12 +212,12 @@ export default function LoginPage() {
                   fontWeight: 700,
                   fontStyle: 'italic',
                   letterSpacing: '0.01em',
-                  color: '#f0f4ff',
+                  color: isDark ? '#f0f4ff' : '#1c1916',
                   marginBottom: 3,
                   lineHeight: 1.4,
                   paddingBottom: '0.1em',
                 }}>Welcome back</h1>
-                <p style={{ color:'rgba(200,215,240,.55)', fontSize:'.78rem' }}>
+                <p style={{ color: isDark ? 'rgba(200,215,240,.55)' : '#978f86', fontSize:'.78rem' }}>
                   Sign in to manage your events
                 </p>
               </div>
@@ -216,61 +227,63 @@ export default function LoginPage() {
 
                 {/* Email */}
                 <div style={{ marginBottom:12 }}>
-                  <label style={{ display:'block', fontSize:'.72rem', fontWeight:500, color:'rgba(255,255,255,.55)', marginBottom:4 }}>
+                  <label style={{ display:'block', fontSize:'.72rem', fontWeight:600, color: isDark ? 'rgba(255,255,255,.55)' : '#534e47', marginBottom:4 }}>
                     Email Address
                   </label>
                   <div style={{ position:'relative' }}>
-                    <Mail size={13} style={{ position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,.22)',pointerEvents:'none' }}/>
+                    <Mail size={13} style={{ position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',color: isDark ? 'rgba(255,255,255,.22)' : '#c4bdb0',pointerEvents:'none' }}/>
                     <input type="email"
                       style={{
                         width:'100%', padding:'9px 11px 9px 32px',
-                        background:'rgba(255,255,255,.07)',
-                        border:`1px solid ${errors.email?'#ff5c7a':'rgba(240,180,41,.18)'}`,
-                        borderRadius:9, color:'#f0f4ff',
+                        background: isDark ? 'rgba(255,255,255,.07)' : '#f6f4ef',
+                        border:`1px solid ${errors.email ? '#dc2452' : isDark ? 'rgba(240,180,41,.18)' : 'rgba(184,120,16,.28)'}`,
+                        borderRadius:9, color: isDark ? '#f0f4ff' : '#1c1916',
                         fontSize:'.875rem', outline:'none',
                         fontFamily:'DM Sans,sans-serif',
                       }}
-                      onFocus={e=>e.target.style.borderColor='rgba(240,180,41,.5)'}
-                      onBlur={e=>e.target.style.borderColor=errors.email?'#ff5c7a':'rgba(240,180,41,.14)'}
+                      onFocus={e=>e.target.style.borderColor='rgba(184,120,16,.6)'}
+                      onBlur={e=>e.target.style.borderColor=errors.email ? (isDark?'#ff5c7a':'#dc2452') : isDark ? 'rgba(240,180,41,.14)' : 'rgba(184,120,16,.28)'}
                       placeholder="you@example.com"
                       value={email}
                       onChange={e=>{setEmail(e.target.value);setErrors(p=>({...p,email:''}))}}
                       autoFocus
                     />
                   </div>
-                  {errors.email && <div style={{color:'#ff5c7a',fontSize:'.7rem',marginTop:3}}>{errors.email}</div>}
+                  {errors.email && <div style={{color: isDark ? '#ff5c7a' : '#dc2452',fontSize:'.7rem',marginTop:3}}>{errors.email}</div>}
                 </div>
 
                 {/* Password */}
                 <div style={{ marginBottom:16 }}>
-                  <label style={{ display:'block', fontSize:'.72rem', fontWeight:500, color:'rgba(255,255,255,.55)', marginBottom:4 }}>
+                  <label style={{ display:'block', fontSize:'.72rem', fontWeight:600, color: isDark ? 'rgba(255,255,255,.55)' : '#534e47', marginBottom:4 }}>
                     Password
                   </label>
                   <div style={{ position:'relative' }}>
-                    <Lock size={13} style={{ position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,.22)',pointerEvents:'none' }}/>
+                    <Lock size={13} style={{ position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',color: isDark ? 'rgba(255,255,255,.22)' : '#c4bdb0',pointerEvents:'none' }}/>
                     <input type="password"
                       style={{
                         width:'100%', padding:'9px 11px 9px 32px',
-                        background:'rgba(255,255,255,.07)',
-                        border:`1px solid ${errors.password?'#ff5c7a':'rgba(240,180,41,.18)'}`,
-                        borderRadius:9, color:'#f0f4ff',
+                        background: isDark ? 'rgba(255,255,255,.07)' : '#f6f4ef',
+                        border:`1px solid ${errors.password ? (isDark?'#ff5c7a':'#dc2452') : isDark ? 'rgba(240,180,41,.18)' : 'rgba(184,120,16,.28)'}`,
+                        borderRadius:9, color: isDark ? '#f0f4ff' : '#1c1916',
                         fontSize:'.875rem', outline:'none',
                         fontFamily:'DM Sans,sans-serif',
                       }}
-                      onFocus={e=>e.target.style.borderColor='rgba(240,180,41,.5)'}
-                      onBlur={e=>e.target.style.borderColor=errors.password?'#ff5c7a':'rgba(240,180,41,.14)'}
+                      onFocus={e=>e.target.style.borderColor='rgba(184,120,16,.6)'}
+                      onBlur={e=>e.target.style.borderColor=errors.password ? (isDark?'#ff5c7a':'#dc2452') : isDark ? 'rgba(240,180,41,.14)' : 'rgba(184,120,16,.28)'}
                       placeholder="••••••••"
                       value={password}
                       onChange={e=>{setPassword(e.target.value);setErrors(p=>({...p,password:''}))}}
                     />
                   </div>
-                  {errors.password && <div style={{color:'#ff5c7a',fontSize:'.7rem',marginTop:3}}>{errors.password}</div>}
+                  {errors.password && <div style={{color: isDark ? '#ff5c7a' : '#dc2452',fontSize:'.7rem',marginTop:3}}>{errors.password}</div>}
                 </div>
 
                 {errors.form && (
                   <div style={{
-                    background:'rgba(255,92,122,.08)', border:'1px solid rgba(255,92,122,.25)',
-                    borderRadius:8, padding:'7px 11px', color:'#ff5c7a',
+                    background: isDark ? 'rgba(255,92,122,.08)' : 'rgba(220,36,82,.06)',
+                    border: `1px solid ${isDark ? 'rgba(255,92,122,.25)' : 'rgba(220,36,82,.2)'}`,
+                    borderRadius:8, padding:'7px 11px',
+                    color: isDark ? '#ff5c7a' : '#dc2452',
                     fontSize:'.76rem', marginBottom:12,
                   }}>{errors.form}</div>
                 )}
@@ -295,10 +308,10 @@ export default function LoginPage() {
               </form>
 
               {/* Footer */}
-              <p style={{ textAlign:'center', marginTop:16, fontSize:'.68rem', color:'rgba(255,255,255,.18)' }}>
+              <p style={{ textAlign:'center', marginTop:16, fontSize:'.68rem', color: isDark ? 'rgba(255,255,255,.18)' : '#c4bdb0' }}>
                 Contact your admin to get access
               </p>
-              <p style={{ textAlign:'center', marginTop:5, fontSize:'.58rem', color:'rgba(255,255,255,.1)', letterSpacing:'.04em' }}>
+              <p style={{ textAlign:'center', marginTop:5, fontSize:'.58rem', color: isDark ? 'rgba(255,255,255,.1)' : '#d8d2c6', letterSpacing:'.04em' }}>
                 v{APP_VERSION} · {BUILD_DATE}
               </p>
             </div>
@@ -306,7 +319,7 @@ export default function LoginPage() {
             {/* Below card */}
             <div style={{
               textAlign:'center', marginTop:16,
-              fontSize:'.62rem', color:'rgba(255,255,255,.1)',
+              fontSize:'.62rem', color: isDark ? 'rgba(255,255,255,.1)' : '#c4bdb0',
               letterSpacing:'.12em', textTransform:'uppercase',
             }}>
               🎊 Weddings · Birthdays · Corporate Events 🎊
@@ -317,18 +330,18 @@ export default function LoginPage() {
         {/* ════════════════ RIGHT — Decorative panel (desktop only) ════════════════ */}
         <div className="login-right-panel" style={{
           width:360,
-          background:'rgba(10,6,22,.85)',
-          borderLeft:'1px solid rgba(108,99,255,.12)',
+          background: isDark ? 'rgba(10,6,22,.85)' : 'rgba(255,251,244,.92)',
+          borderLeft: isDark ? '1px solid rgba(108,99,255,.12)' : '1px solid rgba(184,120,16,.15)',
           display:'flex', flexDirection:'column',
           alignItems:'center', justifyContent:'center',
           padding:'40px 32px', position:'relative', overflow:'hidden', zIndex:5,
         }}>
           {/* Glow spots */}
-          <div style={{position:'absolute',top:-50,left:'50%',transform:'translateX(-50%)',width:280,height:280,borderRadius:'50%',background:'radial-gradient(circle,rgba(160,20,20,.18) 0%,transparent 70%)',pointerEvents:'none'}}/>
-          <div style={{position:'absolute',bottom:-50,right:-50,width:240,height:240,borderRadius:'50%',background:'radial-gradient(circle,rgba(220,120,10,.12) 0%,transparent 70%)',pointerEvents:'none'}}/>
+          <div style={{position:'absolute',top:-50,left:'50%',transform:'translateX(-50%)',width:280,height:280,borderRadius:'50%',background: isDark ? 'radial-gradient(circle,rgba(160,20,20,.18) 0%,transparent 70%)' : 'radial-gradient(circle,rgba(240,180,41,.10) 0%,transparent 70%)',pointerEvents:'none'}}/>
+          <div style={{position:'absolute',bottom:-50,right:-50,width:240,height:240,borderRadius:'50%',background: isDark ? 'radial-gradient(circle,rgba(220,120,10,.12) 0%,transparent 70%)' : 'radial-gradient(circle,rgba(92,84,238,.07) 0%,transparent 70%)',pointerEvents:'none'}}/>
 
           <div style={{ position:'relative', zIndex:1, textAlign:'center', width:'100%' }}>
-            <div style={{ fontSize:'.75rem', letterSpacing:'.25em', color:'rgba(240,180,41,.3)', marginBottom:14 }}>❧ ✦ ❧</div>
+            <div style={{ fontSize:'.75rem', letterSpacing:'.25em', color: isDark ? 'rgba(240,180,41,.3)' : 'rgba(184,120,16,.45)', marginBottom:14 }}>❧ ✦ ❧</div>
 
             {/* Event icons */}
             <div style={{ display:'flex', justifyContent:'center', gap:14, marginBottom:18, fontSize:'1.8rem' }}>
@@ -341,12 +354,12 @@ export default function LoginPage() {
               <div className="shimmer-gold" style={{ fontFamily:'Syne,sans-serif', fontWeight:900, fontSize:'1.4rem', letterSpacing:'-.02em', lineHeight:1.2 }}>
                 Your Events,
               </div>
-              <div style={{ color:'rgba(255,255,255,.6)', fontSize:'1.1rem', fontFamily:'Syne,sans-serif', fontWeight:700, marginTop:4 }}>
+              <div style={{ color: isDark ? 'rgba(255,255,255,.6)' : '#534e47', fontSize:'1.1rem', fontFamily:'Syne,sans-serif', fontWeight:700, marginTop:4 }}>
                 Perfectly Managed
               </div>
             </div>
 
-            <p style={{ color:'rgba(255,255,255,.22)', fontSize:'.78rem', lineHeight:1.7, maxWidth:260, margin:'0 auto 20px' }}>
+            <p style={{ color: isDark ? 'rgba(255,255,255,.22)' : '#978f86', fontSize:'.78rem', lineHeight:1.7, maxWidth:260, margin:'0 auto 20px' }}>
               From grand weddings to birthday celebrations — track every booking, staff, machine and payment.
             </p>
 
@@ -354,16 +367,16 @@ export default function LoginPage() {
               <div key={label} style={{
                 display:'flex', alignItems:'center', gap:10,
                 padding:'7px 12px', marginBottom:6,
-                background:'rgba(255,255,255,.025)',
-                border:'1px solid rgba(255,255,255,.04)',
+                background: isDark ? 'rgba(255,255,255,.025)' : 'rgba(184,120,16,.05)',
+                border: isDark ? '1px solid rgba(255,255,255,.04)' : '1px solid rgba(184,120,16,.10)',
                 borderRadius:8, textAlign:'left',
               }}>
                 <span style={{ fontSize:'.85rem' }}>{icon}</span>
-                <span style={{ fontSize:'.75rem', color:'rgba(255,255,255,.35)' }}>{label}</span>
+                <span style={{ fontSize:'.75rem', color: isDark ? 'rgba(255,255,255,.35)' : '#534e47' }}>{label}</span>
               </div>
             ))}
 
-            <div style={{ marginTop:20, fontSize:'.62rem', color:'rgba(240,180,41,.18)', letterSpacing:'.18em' }}>
+            <div style={{ marginTop:20, fontSize:'.62rem', color: isDark ? 'rgba(240,180,41,.18)' : 'rgba(184,120,16,.4)', letterSpacing:'.18em' }}>
               ── All Solutions · Kolkata ──
             </div>
           </div>
