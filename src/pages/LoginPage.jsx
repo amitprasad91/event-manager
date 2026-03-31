@@ -3,18 +3,27 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import toast from 'react-hot-toast'
-import { Loader2, Mail, Lock } from 'lucide-react'
+import { Loader2, Mail, Lock, CalendarDays, Users, CreditCard, BarChart3 } from 'lucide-react'
 import { APP_VERSION, BUILD_DATE } from '../version.js'
+
+const FEATURES = [
+  { icon: CalendarDays, label: 'Event Scheduling',   desc: 'Plan and track every event detail' },
+  { icon: Users,        label: 'Team & Staff',        desc: 'Manage people, roles and assignments' },
+  { icon: CreditCard,   label: 'Payment Tracking',    desc: 'Monitor revenue and outstanding dues' },
+  { icon: BarChart3,    label: 'Profit & Analytics',  desc: 'Split profits and view performance' },
+]
 
 export default function LoginPage() {
   const { signIn }  = useAuth()
   const { theme }   = useTheme()
   const navigate    = useNavigate()
   const isDark      = theme === 'dark'
+
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading]   = useState(false)
   const [errors, setErrors]     = useState({})
+  const [focusedField, setFocusedField] = useState(null)
 
   function validate() {
     const e = {}
@@ -40,347 +49,483 @@ export default function LoginPage() {
     }
   }
 
+  /* ── color tokens per theme ── */
+  const c = isDark ? {
+    pageBg:       '#111827',
+    panelBg:      'linear-gradient(160deg, #0f172a 0%, #1a1040 50%, #0d1f2d 100%)',
+    cardBg:       '#1e2a3a',
+    cardBorder:   'rgba(255,255,255,0.08)',
+    cardShadow:   '0 24px 60px rgba(0,0,0,0.5)',
+    inputBg:      '#111827',
+    inputBorder:  'rgba(255,255,255,0.12)',
+    inputFocus:   '#6c63ff',
+    inputColor:   '#eef2ff',
+    placeholder:  'rgba(255,255,255,0.28)',
+    labelColor:   'rgba(255,255,255,0.55)',
+    headingColor: '#f0f4ff',
+    subColor:     'rgba(200,215,240,0.5)',
+    rightBg:      'linear-gradient(160deg, #1a0f38 0%, #0f1a30 60%, #1a1040 100%)',
+    rightBorder:  'rgba(108,99,255,0.2)',
+    featureBg:    'rgba(255,255,255,0.04)',
+    featureBorder:'rgba(255,255,255,0.06)',
+    featureText:  'rgba(255,255,255,0.7)',
+    featureDesc:  'rgba(255,255,255,0.3)',
+    footerColor:  'rgba(255,255,255,0.22)',
+    versionColor: 'rgba(255,255,255,0.12)',
+    divider:      'rgba(255,255,255,0.06)',
+    errorBg:      'rgba(255,92,122,0.08)',
+    errorBorder:  'rgba(255,92,122,0.25)',
+    errorText:    '#ff5c7a',
+    iconColor:    'rgba(255,255,255,0.22)',
+  } : {
+    pageBg:       '#f6f4ef',
+    panelBg:      'linear-gradient(160deg, #f6f4ef 0%, #ede8df 100%)',
+    cardBg:       '#ffffff',
+    cardBorder:   'rgba(0,0,0,0.08)',
+    cardShadow:   '0 8px 40px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06)',
+    inputBg:      '#f6f4ef',
+    inputBorder:  '#d8d2c6',
+    inputFocus:   '#5c54ee',
+    inputColor:   '#1c1916',
+    placeholder:  '#b0a89e',
+    labelColor:   '#534e47',
+    headingColor: '#1c1916',
+    subColor:     '#978f86',
+    rightBg:      'linear-gradient(160deg, #1a1040 0%, #0f1a30 100%)',
+    rightBorder:  'rgba(108,99,255,0.15)',
+    featureBg:    'rgba(255,255,255,0.06)',
+    featureBorder:'rgba(255,255,255,0.08)',
+    featureText:  'rgba(255,255,255,0.75)',
+    featureDesc:  'rgba(255,255,255,0.35)',
+    footerColor:  '#c4bdb0',
+    versionColor: '#d8d2c6',
+    divider:      '#e8e3da',
+    errorBg:      'rgba(220,36,82,0.06)',
+    errorBorder:  'rgba(220,36,82,0.2)',
+    errorText:    '#dc2452',
+    iconColor:    '#c4bdb0',
+  }
+
+  function inputStyle(field, hasError) {
+    const focused = focusedField === field
+    return {
+      width: '100%',
+      padding: '11px 12px 11px 38px',
+      background: c.inputBg,
+      border: `1.5px solid ${hasError ? c.errorText : focused ? c.inputFocus : c.inputBorder}`,
+      borderRadius: 10,
+      color: c.inputColor,
+      fontSize: '0.9rem',
+      outline: 'none',
+      fontFamily: 'DM Sans, sans-serif',
+      transition: 'border-color 0.15s, box-shadow 0.15s',
+      boxShadow: focused ? `0 0 0 3px ${isDark ? 'rgba(108,99,255,0.18)' : 'rgba(92,84,238,0.12)'}` : 'none',
+    }
+  }
+
   return (
     <>
       <style>{`
-        @keyframes floatDiya {
-          0%,100% { transform: translateY(0) rotate(-5deg); }
-          50%      { transform: translateY(-10px) rotate(5deg); }
-        }
         @keyframes riseUp {
-          from { opacity:0; transform:translateY(24px); }
-          to   { opacity:1; transform:translateY(0); }
+          from { opacity: 0; transform: translateY(20px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
-        @keyframes twinkle {
-          0%,100% { opacity:.15; transform:scale(.8); }
-          50%     { opacity:.8;  transform:scale(1.2); }
+        @keyframes fadeSlide {
+          from { opacity: 0; transform: translateX(16px); }
+          to   { opacity: 1; transform: translateX(0); }
         }
-        @keyframes glowPulse {
-          0%,100% { box-shadow: 0 0 24px rgba(240,140,20,.2), inset 0 1px 0 rgba(240,180,41,.15); }
-          50%     { box-shadow: 0 0 48px rgba(240,140,20,.35), inset 0 1px 0 rgba(240,180,41,.3); }
-        }
-        .login-wrap { animation: riseUp .5s ease forwards; }
-        .shimmer-gold {
-          background: linear-gradient(90deg,#c8860a 0%,#f0b429 25%,#ffd060 50%,#f0b429 75%,#c8860a 100%);
+        .login-card-wrap { animation: riseUp 0.45s cubic-bezier(0.22,1,0.36,1) forwards; }
+        .login-right-content { animation: fadeSlide 0.5s 0.1s cubic-bezier(0.22,1,0.36,1) both; }
+        .shimmer-brand {
+          background: linear-gradient(90deg, #c8860a 0%, #f0b429 30%, #ffd060 50%, #f0b429 70%, #c8860a 100%);
           background-size: 200% auto;
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
-          animation: shimmerText 3s linear infinite;
+          animation: shimmerText 4s linear infinite;
         }
-        .login-card-anim { animation: glowPulse 3s ease-in-out infinite; }
-        .diya { animation: floatDiya 3s ease-in-out infinite; font-size:1.3rem; line-height:1; position:absolute; z-index:4; pointer-events:none; }
-        .star { animation: twinkle 2s ease-in-out infinite; position:absolute; z-index:4; pointer-events:none; font-size:.75rem; color:rgba(240,180,41,.5); }
-        /* right panel hidden on mobile */
-        @media (max-width:768px) { .login-right-panel { display:none !important; } }
+        .login-submit-btn:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 10px 28px rgba(240,140,20,0.4) !important;
+        }
+        .login-submit-btn:active:not(:disabled) { transform: translateY(0); }
+        @media (max-width: 768px) {
+          .login-right-panel { display: none !important; }
+          .login-left-panel  { padding: 24px 16px !important; }
+        }
+        @media (max-width: 400px) {
+          .login-card-wrap { padding: 24px 18px !important; }
+        }
       `}</style>
 
-      {/* ── Page shell ── */}
       <div style={{
-        minHeight:'100vh', display:'flex',
-        background: isDark ? '#0d0818' : '#f6f4ef',
-        overflow:'hidden', position:'relative',
+        minHeight: '100vh',
+        display: 'flex',
+        background: c.pageBg,
+        fontFamily: 'DM Sans, sans-serif',
       }}>
 
-        {/* Background radial glows */}
-        <div style={{
-          position:'absolute', inset:0, zIndex:0, pointerEvents:'none',
-          background: isDark
-            ? `radial-gradient(ellipse 80% 60% at 20% 0%,   rgba(108,63,255,.22)  0%,transparent 60%),
-               radial-gradient(ellipse 60% 50% at 85% 85%,  rgba(240,120,10,.18)  0%,transparent 55%),
-               radial-gradient(ellipse 50% 70% at 0%  55%,  rgba(180,20,80,.15)   0%,transparent 55%),
-               radial-gradient(ellipse 40% 40% at 60% 40%,  rgba(30,100,220,.12)  0%,transparent 50%)`
-            : `radial-gradient(ellipse 70% 55% at 20% 10%,  rgba(184,120,16,.10)  0%,transparent 65%),
-               radial-gradient(ellipse 50% 45% at 85% 80%,  rgba(92,84,238,.07)   0%,transparent 60%),
-               radial-gradient(ellipse 40% 50% at 5%  60%,  rgba(220,36,82,.05)   0%,transparent 55%)`,
-        }}/>
-
-        {/* Top garland bar */}
-        <div style={{
-          position:'absolute',top:0,left:0,right:0,height:3,zIndex:5,
-          background:'linear-gradient(90deg,transparent,#c8860a 15%,#f0b429 35%,#ff8c42 50%,#f0b429 65%,#c8860a 85%,transparent)',
-          opacity: isDark ? .7 : .5,
-        }}/>
-        {/* Bottom bar */}
-        <div style={{
-          position:'absolute',bottom:0,left:0,right:0,height:2,zIndex:5,
-          background:'linear-gradient(90deg,transparent,#8b1a1a 30%,#c8860a 50%,#8b1a1a 70%,transparent)',
-          opacity:.45,
-        }}/>
-
-        {/* Decorative circles */}
-        {[['-100px','-100px','350px'],['auto','-80px','280px','100px']].map(([t,r,s,b],i)=>
-          <div key={i} style={{
-            position:'absolute',top:t,right:r,bottom:b,width:s,height:s,
-            borderRadius:'50%',border:'1px solid rgba(240,180,41,.05)',zIndex:1,pointerEvents:'none',
-          }}/>
-        )}
-
-        {/* Floating diyas */}
-        <span className="diya" style={{top:'7%', left:'5%',  animationDelay:'0s',   opacity: isDark?1:.55}}>🪔</span>
-        <span className="diya" style={{top:'12%',right:'6%', animationDelay:'1s',   opacity: isDark?1:.55}}>🪔</span>
-        <span className="diya" style={{bottom:'10%',left:'4%',animationDelay:'2s',  opacity: isDark?1:.55}}>🪔</span>
-        <span className="diya" style={{bottom:'7%', right:'5%',animationDelay:'.5s',opacity: isDark?1:.55}}>🪔</span>
-
-        {/* Twinkling stars */}
-        <span className="star" style={{top:'5%', left:'18%', animationDelay:'0s',   opacity: isDark?.8:.35}}>✦</span>
-        <span className="star" style={{top:'22%',right:'10%',animationDelay:'.7s',  opacity: isDark?.8:.35}}>✦</span>
-        <span className="star" style={{bottom:'18%',left:'12%',animationDelay:'1.4s',opacity:isDark?.8:.35}}>✦</span>
-        <span className="star" style={{bottom:'30%',right:'8%',animationDelay:'.3s',opacity: isDark?.8:.35}}>✦</span>
-
-        {/* ════════════════ LEFT — Login card ════════════════ */}
-        <div style={{
-          flex:1, display:'flex', alignItems:'center', justifyContent:'center',
-          padding:'32px 20px', zIndex:10, position:'relative',
-          minWidth:0, /* CRITICAL for mobile */
+        {/* ── LEFT — Form panel ── */}
+        <div className="login-left-panel" style={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '40px 32px',
+          background: c.panelBg,
+          position: 'relative',
+          minWidth: 0,
         }}>
-          <div className="login-wrap" style={{ width:'100%', maxWidth:400 }}>
+          {/* Subtle ambient glow */}
+          <div style={{
+            position: 'absolute', inset: 0, pointerEvents: 'none',
+            background: isDark
+              ? 'radial-gradient(ellipse 70% 50% at 50% 100%, rgba(108,99,255,0.10) 0%, transparent 70%)'
+              : 'radial-gradient(ellipse 60% 40% at 50% 100%, rgba(184,120,16,0.07) 0%, transparent 65%)',
+          }}/>
 
-            <div className="login-card-anim" style={{
-              background: isDark ? 'rgba(13,8,26,.95)' : '#ffffff',
-              border: isDark ? '1px solid rgba(240,180,41,.25)' : '1px solid rgba(184,120,16,.28)',
-              borderRadius:20,
-              padding:'32px 28px 24px',
-              backdropFilter:'blur(20px)',
-              position:'relative', overflow:'hidden',
-              boxShadow: isDark
-                ? '0 24px 80px rgba(0,0,0,.6)'
-                : '0 8px 40px rgba(0,0,0,.10)',
+          <div className="login-card-wrap" style={{ width: '100%', maxWidth: 420, position: 'relative' }}>
+
+            {/* ── Card ── */}
+            <div style={{
+              background: c.cardBg,
+              border: `1px solid ${c.cardBorder}`,
+              borderRadius: 20,
+              padding: '36px 32px 28px',
+              boxShadow: c.cardShadow,
+              position: 'relative',
+              overflow: 'hidden',
             }}>
 
-              {/* Card top shimmer line */}
+              {/* Gold accent top bar */}
               <div style={{
-                position:'absolute',top:0,left:28,right:28,height:1,
-                background: isDark
-                  ? 'linear-gradient(90deg,transparent,rgba(240,180,41,.65),rgba(255,140,66,.4),transparent)'
-                  : 'linear-gradient(90deg,transparent,rgba(184,120,16,.45),rgba(240,140,16,.3),transparent)',
+                position: 'absolute', top: 0, left: 0, right: 0, height: 3,
+                background: 'linear-gradient(90deg, #b87008, #f0b429 40%, #ff8c42 70%, #f0b429)',
+                borderRadius: '20px 20px 0 0',
               }}/>
 
-              {/* Corner sparkles */}
-              {[{top:8,left:10},{top:8,right:10},{bottom:8,left:10},{bottom:8,right:10}].map((pos,i)=>(
-                <span key={i} style={{
-                  position:'absolute', fontSize:'.65rem', opacity:.35,
-                  animation:`twinkle ${1.4+i*.25}s ease-in-out infinite`,
-                  animationDelay:`${i*.2}s`, ...pos,
-                }}>✦</span>
-              ))}
-
               {/* ── Brand ── */}
-              <div style={{ textAlign:'center', marginBottom:22 }}>
-                <div style={{ fontSize:'.8rem', letterSpacing:'.3em', color:'rgba(240,180,41,.35)', marginBottom:8 }}>
-                  ❧ ✦ ❧
-                </div>
-                <div style={{
-                  fontFamily:'"Cinzel","Playfair Display",serif',
-                  fontWeight: 800,
-                  fontSize: '1.85rem',
-                  letterSpacing: '0.06em',
-                  lineHeight: 1,
-                  background: 'linear-gradient(135deg,#c8860a 0%,#f0b429 40%,#ffd060 60%,#f0b429 80%,#c8860a 100%)',
-                  backgroundSize: '200% auto',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                  animation: 'shimmerText 4s linear infinite',
-                }}>
-                  All Solutions
-                </div>
-                <div style={{
-                  display:'inline-flex', alignItems:'center', gap:5, marginTop:8,
-                  background:'rgba(240,180,41,.06)', border:'1px solid rgba(240,180,41,.14)',
-                  borderRadius:100, padding:'3px 12px',
-                  fontSize:'.58rem', color: isDark ? 'rgba(255,255,255,.35)' : '#978f86',
-                  letterSpacing:'.2em', textTransform:'uppercase',
-                  fontFamily:'DM Sans,sans-serif',
-                }}>
-                  <span style={{width:4,height:4,borderRadius:'50%',background:'#f0b429',display:'inline-block',boxShadow:'0 0 5px #f0b429'}}/>
-                  Kolkata
-                </div>
-                <div style={{ fontSize:'.65rem', color: isDark ? 'rgba(255,255,255,.18)' : '#c4bdb0', marginTop:7, fontStyle:'italic' }}>
-                  Event Management & Rentals
-                </div>
-                <div style={{ fontSize:'.65rem', color:'rgba(184,120,16,.4)', marginTop:8, letterSpacing:'.2em' }}>
-                  ── ✦ ──
+              <div style={{ marginBottom: 28 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
+                  <div style={{
+                    width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+                    background: 'linear-gradient(135deg, #f0b429, #ff8c42)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '1.15rem',
+                    boxShadow: '0 4px 14px rgba(240,180,41,0.35)',
+                  }}>🎪</div>
+                  <div>
+                    <div className="shimmer-brand" style={{
+                      fontFamily: '"Cinzel", serif',
+                      fontWeight: 800,
+                      fontSize: '1.4rem',
+                      letterSpacing: '0.04em',
+                      lineHeight: 1.1,
+                    }}>
+                      All Solutions
+                    </div>
+                    <div style={{
+                      fontSize: '0.65rem',
+                      color: isDark ? 'rgba(255,255,255,0.28)' : '#b0a89e',
+                      letterSpacing: '0.22em',
+                      textTransform: 'uppercase',
+                      marginTop: 2,
+                      fontFamily: 'DM Sans, sans-serif',
+                    }}>
+                      Kolkata · Event Management
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* ── Welcome ── */}
-              <div style={{ marginBottom:18 }}>
+              {/* ── Heading ── */}
+              <div style={{ marginBottom: 24 }}>
                 <h1 style={{
-                  fontFamily:'"Cormorant Garamond","Garamond","Georgia",serif',
-                  fontSize: '1.8rem',
+                  fontFamily: '"Cormorant Garamond", "Georgia", serif',
+                  fontSize: '1.75rem',
                   fontWeight: 700,
                   fontStyle: 'italic',
-                  letterSpacing: '0.01em',
-                  color: isDark ? '#f0f4ff' : '#1c1916',
-                  marginBottom: 3,
-                  lineHeight: 1.4,
-                  paddingBottom: '0.1em',
-                }}>Welcome back</h1>
-                <p style={{ color: isDark ? 'rgba(200,215,240,.55)' : '#978f86', fontSize:'.78rem' }}>
+                  color: c.headingColor,
+                  margin: 0,
+                  lineHeight: 1.2,
+                }}>
+                  Welcome back
+                </h1>
+                <p style={{ color: c.subColor, fontSize: '0.85rem', marginTop: 6 }}>
                   Sign in to manage your events
                 </p>
               </div>
+
+              {/* Divider */}
+              <div style={{ height: 1, background: c.divider, marginBottom: 22 }}/>
 
               {/* ── Form ── */}
               <form onSubmit={handleSubmit} noValidate>
 
                 {/* Email */}
-                <div style={{ marginBottom:12 }}>
-                  <label style={{ display:'block', fontSize:'.72rem', fontWeight:600, color: isDark ? 'rgba(255,255,255,.55)' : '#534e47', marginBottom:4 }}>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    color: c.labelColor,
+                    marginBottom: 6,
+                    letterSpacing: '0.02em',
+                  }}>
                     Email Address
                   </label>
-                  <div style={{ position:'relative' }}>
-                    <Mail size={13} style={{ position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',color: isDark ? 'rgba(255,255,255,.22)' : '#c4bdb0',pointerEvents:'none' }}/>
-                    <input type="email"
-                      style={{
-                        width:'100%', padding:'9px 11px 9px 32px',
-                        background: isDark ? 'rgba(255,255,255,.07)' : '#f6f4ef',
-                        border:`1px solid ${errors.email ? '#dc2452' : isDark ? 'rgba(240,180,41,.18)' : 'rgba(184,120,16,.28)'}`,
-                        borderRadius:9, color: isDark ? '#f0f4ff' : '#1c1916',
-                        fontSize:'.875rem', outline:'none',
-                        fontFamily:'DM Sans,sans-serif',
-                      }}
-                      onFocus={e=>e.target.style.borderColor='rgba(184,120,16,.6)'}
-                      onBlur={e=>e.target.style.borderColor=errors.email ? (isDark?'#ff5c7a':'#dc2452') : isDark ? 'rgba(240,180,41,.14)' : 'rgba(184,120,16,.28)'}
+                  <div style={{ position: 'relative' }}>
+                    <Mail size={14} style={{
+                      position: 'absolute', left: 12, top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: focusedField === 'email' ? c.inputFocus : c.iconColor,
+                      pointerEvents: 'none',
+                      transition: 'color 0.15s',
+                    }}/>
+                    <input
+                      type="email"
+                      style={inputStyle('email', !!errors.email)}
+                      onFocus={() => setFocusedField('email')}
+                      onBlur={() => setFocusedField(null)}
                       placeholder="you@example.com"
                       value={email}
-                      onChange={e=>{setEmail(e.target.value);setErrors(p=>({...p,email:''}))}}
+                      onChange={e => { setEmail(e.target.value); setErrors(p => ({ ...p, email: '' })) }}
                       autoFocus
                     />
                   </div>
-                  {errors.email && <div style={{color: isDark ? '#ff5c7a' : '#dc2452',fontSize:'.7rem',marginTop:3}}>{errors.email}</div>}
+                  {errors.email && (
+                    <div style={{ color: c.errorText, fontSize: '0.72rem', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      {errors.email}
+                    </div>
+                  )}
                 </div>
 
                 {/* Password */}
-                <div style={{ marginBottom:16 }}>
-                  <label style={{ display:'block', fontSize:'.72rem', fontWeight:600, color: isDark ? 'rgba(255,255,255,.55)' : '#534e47', marginBottom:4 }}>
+                <div style={{ marginBottom: 22 }}>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    color: c.labelColor,
+                    marginBottom: 6,
+                    letterSpacing: '0.02em',
+                  }}>
                     Password
                   </label>
-                  <div style={{ position:'relative' }}>
-                    <Lock size={13} style={{ position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',color: isDark ? 'rgba(255,255,255,.22)' : '#c4bdb0',pointerEvents:'none' }}/>
-                    <input type="password"
-                      style={{
-                        width:'100%', padding:'9px 11px 9px 32px',
-                        background: isDark ? 'rgba(255,255,255,.07)' : '#f6f4ef',
-                        border:`1px solid ${errors.password ? (isDark?'#ff5c7a':'#dc2452') : isDark ? 'rgba(240,180,41,.18)' : 'rgba(184,120,16,.28)'}`,
-                        borderRadius:9, color: isDark ? '#f0f4ff' : '#1c1916',
-                        fontSize:'.875rem', outline:'none',
-                        fontFamily:'DM Sans,sans-serif',
-                      }}
-                      onFocus={e=>e.target.style.borderColor='rgba(184,120,16,.6)'}
-                      onBlur={e=>e.target.style.borderColor=errors.password ? (isDark?'#ff5c7a':'#dc2452') : isDark ? 'rgba(240,180,41,.14)' : 'rgba(184,120,16,.28)'}
+                  <div style={{ position: 'relative' }}>
+                    <Lock size={14} style={{
+                      position: 'absolute', left: 12, top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: focusedField === 'password' ? c.inputFocus : c.iconColor,
+                      pointerEvents: 'none',
+                      transition: 'color 0.15s',
+                    }}/>
+                    <input
+                      type="password"
+                      style={inputStyle('password', !!errors.password)}
+                      onFocus={() => setFocusedField('password')}
+                      onBlur={() => setFocusedField(null)}
                       placeholder="••••••••"
                       value={password}
-                      onChange={e=>{setPassword(e.target.value);setErrors(p=>({...p,password:''}))}}
+                      onChange={e => { setPassword(e.target.value); setErrors(p => ({ ...p, password: '' })) }}
                     />
                   </div>
-                  {errors.password && <div style={{color: isDark ? '#ff5c7a' : '#dc2452',fontSize:'.7rem',marginTop:3}}>{errors.password}</div>}
+                  {errors.password && (
+                    <div style={{ color: c.errorText, fontSize: '0.72rem', marginTop: 4 }}>
+                      {errors.password}
+                    </div>
+                  )}
                 </div>
 
+                {/* Form error */}
                 {errors.form && (
                   <div style={{
-                    background: isDark ? 'rgba(255,92,122,.08)' : 'rgba(220,36,82,.06)',
-                    border: `1px solid ${isDark ? 'rgba(255,92,122,.25)' : 'rgba(220,36,82,.2)'}`,
-                    borderRadius:8, padding:'7px 11px',
-                    color: isDark ? '#ff5c7a' : '#dc2452',
-                    fontSize:'.76rem', marginBottom:12,
-                  }}>{errors.form}</div>
+                    background: c.errorBg,
+                    border: `1px solid ${c.errorBorder}`,
+                    borderRadius: 8,
+                    padding: '9px 12px',
+                    color: c.errorText,
+                    fontSize: '0.8rem',
+                    marginBottom: 16,
+                  }}>
+                    {errors.form}
+                  </div>
                 )}
 
-                {/* Sign In */}
-                <button type="submit" disabled={loading} style={{
-                  width:'100%', padding:'13px 11px',
-                  background:loading?'rgba(240,180,41,.25)':'linear-gradient(135deg,#b87008 0%,#f0b429 45%,#ff8c42 100%)',
-                  border:'none', borderRadius:10,
-                  color:loading?'rgba(255,255,255,.4)':'#1a0800',
-                  fontFamily:'Syne,sans-serif', fontWeight:800,
-                  fontSize:'.88rem', letterSpacing:'.05em',
-                  lineHeight:1.6,
-                  minHeight: 46,
-                  cursor:loading?'not-allowed':'pointer',
-                  display:'flex', alignItems:'center', justifyContent:'center', gap:7,
-                  boxShadow:loading?'none':'0 6px 20px rgba(240,140,20,.3)',
-                  transition:'opacity .2s',
-                }}>
-                  {loading ? <><Loader2 size={14} className="spin"/> Signing in…</> : '✦ Sign In'}
+                {/* Submit */}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="login-submit-btn"
+                  style={{
+                    width: '100%',
+                    padding: '13px',
+                    background: loading
+                      ? (isDark ? 'rgba(240,180,41,0.2)' : '#e8e3da')
+                      : 'linear-gradient(135deg, #b87008 0%, #f0b429 45%, #ff8c42 100%)',
+                    border: 'none',
+                    borderRadius: 10,
+                    color: loading ? (isDark ? 'rgba(255,255,255,0.3)' : '#978f86') : '#1a0800',
+                    fontFamily: 'Syne, sans-serif',
+                    fontWeight: 800,
+                    fontSize: '0.9rem',
+                    letterSpacing: '0.04em',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    minHeight: 48,
+                    boxShadow: loading ? 'none' : '0 6px 20px rgba(240,140,20,0.3)',
+                    transition: 'transform 0.15s, box-shadow 0.15s',
+                  }}
+                >
+                  {loading
+                    ? <><Loader2 size={16} className="spin" /> Signing in…</>
+                    : 'Sign In'
+                  }
                 </button>
               </form>
 
               {/* Footer */}
-              <p style={{ textAlign:'center', marginTop:16, fontSize:'.68rem', color: isDark ? 'rgba(255,255,255,.18)' : '#c4bdb0' }}>
-                Contact your admin to get access
-              </p>
-              <p style={{ textAlign:'center', marginTop:5, fontSize:'.58rem', color: isDark ? 'rgba(255,255,255,.1)' : '#d8d2c6', letterSpacing:'.04em' }}>
-                v{APP_VERSION} · {BUILD_DATE}
+              <p style={{
+                textAlign: 'center',
+                marginTop: 20,
+                fontSize: '0.72rem',
+                color: c.footerColor,
+                lineHeight: 1.5,
+              }}>
+                Don't have access? Contact your admin.
               </p>
             </div>
 
             {/* Below card */}
-            <div style={{
-              textAlign:'center', marginTop:16,
-              fontSize:'.62rem', color: isDark ? 'rgba(255,255,255,.1)' : '#c4bdb0',
-              letterSpacing:'.12em', textTransform:'uppercase',
+            <p style={{
+              textAlign: 'center',
+              marginTop: 20,
+              fontSize: '0.65rem',
+              color: c.versionColor,
+              letterSpacing: '0.08em',
             }}>
-              🎊 Weddings · Birthdays · Corporate Events 🎊
-            </div>
+              v{APP_VERSION} · {BUILD_DATE}
+            </p>
           </div>
         </div>
 
-        {/* ════════════════ RIGHT — Decorative panel (desktop only) ════════════════ */}
+        {/* ── RIGHT — Brand panel (desktop only) ── */}
         <div className="login-right-panel" style={{
-          width:360,
-          background: isDark ? 'rgba(10,6,22,.85)' : 'rgba(255,251,244,.92)',
-          borderLeft: isDark ? '1px solid rgba(108,99,255,.12)' : '1px solid rgba(184,120,16,.15)',
-          display:'flex', flexDirection:'column',
-          alignItems:'center', justifyContent:'center',
-          padding:'40px 32px', position:'relative', overflow:'hidden', zIndex:5,
+          width: 380,
+          background: c.rightBg,
+          borderLeft: `1px solid ${c.rightBorder}`,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '48px 36px',
+          position: 'relative',
+          overflow: 'hidden',
+          flexShrink: 0,
         }}>
-          {/* Glow spots */}
-          <div style={{position:'absolute',top:-50,left:'50%',transform:'translateX(-50%)',width:280,height:280,borderRadius:'50%',background: isDark ? 'radial-gradient(circle,rgba(160,20,20,.18) 0%,transparent 70%)' : 'radial-gradient(circle,rgba(240,180,41,.10) 0%,transparent 70%)',pointerEvents:'none'}}/>
-          <div style={{position:'absolute',bottom:-50,right:-50,width:240,height:240,borderRadius:'50%',background: isDark ? 'radial-gradient(circle,rgba(220,120,10,.12) 0%,transparent 70%)' : 'radial-gradient(circle,rgba(92,84,238,.07) 0%,transparent 70%)',pointerEvents:'none'}}/>
+          {/* Background glow */}
+          <div style={{
+            position: 'absolute', inset: 0, pointerEvents: 'none',
+            background: `
+              radial-gradient(ellipse 80% 50% at 50% 0%, rgba(108,99,255,0.18) 0%, transparent 60%),
+              radial-gradient(ellipse 60% 40% at 80% 100%, rgba(240,120,10,0.12) 0%, transparent 55%)
+            `,
+          }}/>
 
-          <div style={{ position:'relative', zIndex:1, textAlign:'center', width:'100%' }}>
-            <div style={{ fontSize:'.75rem', letterSpacing:'.25em', color: isDark ? 'rgba(240,180,41,.3)' : 'rgba(184,120,16,.45)', marginBottom:14 }}>❧ ✦ ❧</div>
+          <div className="login-right-content" style={{ position: 'relative', zIndex: 1, width: '100%' }}>
 
-            {/* Event icons */}
-            <div style={{ display:'flex', justifyContent:'center', gap:14, marginBottom:18, fontSize:'1.8rem' }}>
-              {['💍','🎂','🏢','🎭'].map((e,i)=>(
-                <span key={i} style={{ display:'inline-block', animation:`floatDiya ${2+i*.4}s ease-in-out infinite`, animationDelay:`${i*.3}s` }}>{e}</span>
+            {/* Brand headline */}
+            <div style={{ marginBottom: 36, textAlign: 'center' }}>
+              <div style={{
+                fontSize: '0.65rem',
+                letterSpacing: '0.3em',
+                color: 'rgba(240,180,41,0.5)',
+                textTransform: 'uppercase',
+                marginBottom: 14,
+                fontFamily: 'DM Sans, sans-serif',
+              }}>
+                All Solutions · Kolkata
+              </div>
+              <div style={{
+                fontFamily: '"Syne", sans-serif',
+                fontWeight: 800,
+                fontSize: '1.6rem',
+                letterSpacing: '-0.02em',
+                lineHeight: 1.2,
+                color: '#ffffff',
+                marginBottom: 10,
+              }}>
+                Your Events,<br/>
+                <span style={{
+                  background: 'linear-gradient(90deg, #f0b429, #ff8c42)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}>
+                  Perfectly Managed
+                </span>
+              </div>
+              <p style={{
+                color: 'rgba(255,255,255,0.38)',
+                fontSize: '0.82rem',
+                lineHeight: 1.7,
+                maxWidth: 280,
+                margin: '0 auto',
+              }}>
+                From grand weddings to corporate events — everything tracked in one place.
+              </p>
+            </div>
+
+            {/* Feature list */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {FEATURES.map(({ icon: Icon, label, desc }) => (
+                <div key={label} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 14,
+                  padding: '12px 14px',
+                  background: c.featureBg,
+                  border: `1px solid ${c.featureBorder}`,
+                  borderRadius: 12,
+                }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 9, flexShrink: 0,
+                    background: 'rgba(108,99,255,0.15)',
+                    border: '1px solid rgba(108,99,255,0.2)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Icon size={16} color="rgba(139,133,255,0.9)" strokeWidth={1.5} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 600, color: c.featureText, fontFamily: 'Syne, sans-serif' }}>
+                      {label}
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: c.featureDesc, marginTop: 1 }}>
+                      {desc}
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
 
-            <div style={{ marginBottom:10 }}>
-              <div className="shimmer-gold" style={{ fontFamily:'Syne,sans-serif', fontWeight:900, fontSize:'1.4rem', letterSpacing:'-.02em', lineHeight:1.2 }}>
-                Your Events,
-              </div>
-              <div style={{ color: isDark ? 'rgba(255,255,255,.6)' : '#534e47', fontSize:'1.1rem', fontFamily:'Syne,sans-serif', fontWeight:700, marginTop:4 }}>
-                Perfectly Managed
-              </div>
-            </div>
-
-            <p style={{ color: isDark ? 'rgba(255,255,255,.22)' : '#978f86', fontSize:'.78rem', lineHeight:1.7, maxWidth:260, margin:'0 auto 20px' }}>
-              From grand weddings to birthday celebrations — track every booking, staff, machine and payment.
-            </p>
-
-            {[['💍','Weddings & Receptions'],['🎂','Birthday Parties'],['🏢','Corporate Events'],['🎪','Entertainment & Machines'],['💰','Payment Tracking']].map(([icon,label])=>(
-              <div key={label} style={{
-                display:'flex', alignItems:'center', gap:10,
-                padding:'7px 12px', marginBottom:6,
-                background: isDark ? 'rgba(255,255,255,.025)' : 'rgba(184,120,16,.05)',
-                border: isDark ? '1px solid rgba(255,255,255,.04)' : '1px solid rgba(184,120,16,.10)',
-                borderRadius:8, textAlign:'left',
-              }}>
-                <span style={{ fontSize:'.85rem' }}>{icon}</span>
-                <span style={{ fontSize:'.75rem', color: isDark ? 'rgba(255,255,255,.35)' : '#534e47' }}>{label}</span>
-              </div>
-            ))}
-
-            <div style={{ marginTop:20, fontSize:'.62rem', color: isDark ? 'rgba(240,180,41,.18)' : 'rgba(184,120,16,.4)', letterSpacing:'.18em' }}>
-              ── All Solutions · Kolkata ──
+            {/* Event types */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: 16,
+              marginTop: 28,
+              fontSize: '1.4rem',
+            }}>
+              {['💍', '🎂', '🏢', '🎭', '🎪'].map((e, i) => (
+                <span key={i} style={{ opacity: 0.7 }}>{e}</span>
+              ))}
             </div>
           </div>
         </div>
+
       </div>
     </>
   )
