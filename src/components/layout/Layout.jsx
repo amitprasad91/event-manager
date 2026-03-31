@@ -129,13 +129,20 @@ export default function Layout() {
           <div className="sidebar-divider" />
           <VersionBadge />
           <div className="sidebar-divider" />
-          <button onClick={signOut} className="user-signout-btn">
+
+          {/* User info — display only, not a button */}
+          <div className="user-pill">
             <div className="user-avatar">{initials}</div>
             <div className="user-info">
               <div className="user-name">{profile?.full_name || 'User'}</div>
               <div className="user-role">{profile?.role || 'staff'}</div>
             </div>
-            <LogOut size={14} className="logout-icon" />
+          </div>
+
+          {/* Explicit, clearly labelled sign-out button */}
+          <button onClick={signOut} className="sidebar-action logout">
+            <LogOut size={15} />
+            Sign Out
           </button>
         </div>
       </aside>

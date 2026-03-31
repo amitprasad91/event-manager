@@ -773,22 +773,14 @@ h1, h2, h3, .page-title, .card-title, .modal-title, .nav-section-label {
 }
 
 
-/* ── USER SIGN-OUT BUTTON ── */
-.user-signout-btn {
+/* ── USER PILL — display only, not interactive ── */
+.user-pill {
   display: flex; align-items: center; gap: 10px;
-  width: 100%; padding: 10px 12px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 10px; cursor: pointer;
-  transition: all 0.15s; text-align: left;
-  font-family: 'DM Sans', sans-serif;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
 }
-.user-signout-btn:hover {
-  background: rgba(255,92,122,0.09);
-  border-color: rgba(255,92,122,0.22);
-}
-.user-signout-btn:hover .logout-icon { color: #ff5c7a !important; }
-.logout-icon { color: rgba(255,255,255,0.25); flex-shrink: 0; transition: color 0.15s; }
 
 /* ══════════════════════════════════════════════════════════════
    CUSTOM SCROLLBAR — replaces ugly default browser scrollbar
@@ -923,12 +915,7 @@ h1, h2, h3, .page-title, .card-title, .modal-title, .nav-section-label {
 [data-theme="light"] .user-name             { color: var(--text); }
 [data-theme="light"] .user-role             { color: var(--text-3); }
 [data-theme="light"] .version-badge-btn     { color: var(--text-3); }
-[data-theme="light"] .user-signout-btn      { background: var(--bg-3); border-color: var(--border); }
-[data-theme="light"] .user-signout-btn:hover {
-  background: var(--red-dim);
-  border-color: rgba(220,36,82,0.2);
-}
-[data-theme="light"] .logout-icon           { color: var(--text-3); }
+[data-theme="light"] .user-pill             { background: var(--bg-3); border-color: var(--border); }
 
 /* ══════════════════════════════════════════════════════════════
    LIGHT THEME — comprehensive component overrides
